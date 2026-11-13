@@ -417,8 +417,10 @@ impl LocalSend {
         let s = self.shared.clone();
         spawn("zenith-ls-text", move || {
             let id = random_hex(8);
+            // The full announcement: newer apps refuse an info without
+            // port and protocol (status 400).
             let body = serde_json::json!({
-                "info": s.me,
+                "info": s.announcement(None),
                 "files": {
                     id.clone(): {
                         "id": id,
@@ -432,6 +434,11 @@ impl LocalSend {
             });
             match s.agent.post(&peer.url("/prepare-upload")).send_json(body) {
                 Ok(_) => tracing::info!("localsend: text sent to {}", peer.alias),
+                Err(ureq::Error::Status(code, resp)) => tracing::warn!(
+                    "localsend: text to {}: status {code}: {}",
+                    peer.alias,
+                    resp.into_string().unwrap_or_default()
+                ),
                 Err(e) => tracing::warn!("localsend: text to {}: {e}", peer.alias),
             }
         });
@@ -648,7 +655,20 @@ fn register_with(
 ) -> Option<Peer> {
     let scheme = if https { "https" } else { "http" };
     let url = format!("{scheme}://{ip}:{port}{API}/register");
-    let resp = agent.post(&url).send_json(s.announcement(None)).ok()?;
+    let resp = match agent.post(&url).send_json(s.announcement(None)) {
+        Ok(r) => r,
+        Err(ureq::Error::Status(code, r)) => {
+            tracing::warn!(
+                "localsend: register at {url}: status {code}: {}",
+                r.into_string().unwrap_or_default()
+            );
+            return None;
+        }
+        Err(e) => {
+            tracing::debug!("localsend: register at {url}: {e}");
+            return None;
+        }
+    };
     let info: Info = resp.into_json().ok()?;
     if info.fingerprint == s.me.fingerprint {
         return None;

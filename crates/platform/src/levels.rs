@@ -10,7 +10,9 @@
 //! [`AudioMeter`] reads the playback peak for the pill's waveform; it is
 //! cheap enough to call every frame on the UI thread.
 
-use std::sync::mpsc::{self, Receiver};
+use std::sync::Mutex;
+use std::sync::OnceLock;
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 use windows::Win32::Media::Audio::Endpoints::{IAudioEndpointVolume, IAudioMeterInformation};
 use windows::Win32::Media::Audio::{IMMDeviceEnumerator, MMDeviceEnumerator, eConsole, eRender};
@@ -19,7 +21,7 @@ use windows::Win32::System::Com::{
     RPC_C_AUTHN_LEVEL_CALL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE,
     CoCreateInstance, CoInitializeEx, CoInitializeSecurity, CoSetProxyBlanket,
 };
-use windows::Win32::System::Variant::{VARIANT, VariantClear};
+use windows::Win32::System::Variant::{VARIANT, VT_I4, VT_UI1, VariantClear};
 use windows::Win32::System::Wmi::{
     IWbemContext, IWbemLocator, IWbemServices, WBEM_FLAG_FORWARD_ONLY,
     WBEM_FLAG_RETURN_IMMEDIATELY, WBEM_GENERIC_FLAG_TYPE, WBEM_INFINITE, WbemLocator,
@@ -37,6 +39,27 @@ pub enum LevelChange {
     Volume { level: f32, muted: bool },
     /// Built-in display brightness 0..1.
     Brightness(f32),
+}
+
+/// Latest known levels: (volume, muted) and brightness, for sliders.
+static CURRENT: Mutex<(Option<(f32, bool)>, Option<f32>)> = Mutex::new((None, None));
+
+/// Latest volume (0..1, muted) and brightness (0..1); `None` until read,
+/// brightness stays `None` without a WMI source.
+pub fn current() -> (Option<(f32, bool)>, Option<f32>) {
+    CURRENT.lock().map(|c| *c).unwrap_or((None, None))
+}
+
+fn store_volume(v: (f32, bool)) {
+    if let Ok(mut c) = CURRENT.lock() {
+        c.0 = Some(v);
+    }
+}
+
+fn store_brightness(b: f32) {
+    if let Ok(mut c) = CURRENT.lock() {
+        c.1 = Some(b);
+    }
 }
 
 pub struct LevelWatcher {
@@ -76,6 +99,7 @@ impl LevelWatcher {
                         match read {
                             (Ok(level), Ok(muted)) => {
                                 let cur = (level, muted.as_bool());
+                                store_volume(cur);
                                 let changed = last_volume.is_some_and(|(l, m)| {
                                     (l - cur.0).abs() > 0.004 || m != cur.1
                                 });
@@ -104,6 +128,7 @@ impl LevelWatcher {
                         }
                         match wmi.as_ref().and_then(brightness) {
                             Some(b) => {
+                                store_brightness(b as f32 / 100.0);
                                 if last_brightness.is_some_and(|p| p != b) {
                                     if tx.send(LevelChange::Brightness(b as f32 / 100.0)).is_err()
                                     {
@@ -246,5 +271,153 @@ impl AudioMeter {
             Some(m) => unsafe { m.GetPeakValue() }.unwrap_or(0.0).clamp(0.0, 1.0),
             None => 0.0,
         }
+    }
+}
+
+/// A level to set (from a slider).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum SetLevel {
+    Volume(f32),
+    Mute(bool),
+    Brightness(f32),
+}
+
+/// Sets a level on a worker thread. Calls made while it is busy (a slider
+/// being dragged) collapse into the latest value of each kind.
+pub fn set_level(level: SetLevel) {
+    static TX: OnceLock<Option<Sender<SetLevel>>> = OnceLock::new();
+    let tx = TX.get_or_init(|| {
+        let (tx, rx) = mpsc::channel::<SetLevel>();
+        std::thread::Builder::new()
+            .name("zenith-set-level".into())
+            .spawn(move || control_loop(rx))
+            .inspect_err(|e| tracing::warn!("set level thread: {e}"))
+            .ok()
+            .map(|_| tx)
+    });
+    // Show the new value at once; the watcher confirms it.
+    if let Ok(mut c) = CURRENT.lock() {
+        match level {
+            SetLevel::Volume(v) => c.0 = Some((v, false)),
+            SetLevel::Mute(m) => c.0 = c.0.map(|(v, _)| (v, m)),
+            SetLevel::Brightness(b) => {
+                if c.1.is_some() {
+                    c.1 = Some(b);
+                }
+            }
+        }
+    }
+    if let Some(tx) = tx {
+        let _ = tx.send(level);
+    }
+}
+
+fn control_loop(rx: Receiver<SetLevel>) {
+    // SAFETY: COM for this thread only; the objects never leave it.
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+    }
+    let mut volume: Option<IAudioEndpointVolume> = None;
+    let mut wmi: Option<IWbemServices> = None;
+    while let Ok(first) = rx.recv() {
+        // Keep only the newest value of each kind.
+        let (mut vol, mut mute, mut bright) = (None, None, None);
+        for l in std::iter::once(first).chain(rx.try_iter()) {
+            match l {
+                SetLevel::Volume(v) => vol = Some(v),
+                SetLevel::Mute(m) => mute = Some(m),
+                SetLevel::Brightness(b) => bright = Some(b),
+            }
+        }
+        if vol.is_some() || mute.is_some() {
+            if volume.is_none() {
+                volume = endpoint::<IAudioEndpointVolume>().ok();
+            }
+            if let Some(ep) = &volume {
+                // SAFETY: plain setters on a live COM object.
+                let r = unsafe {
+                    let a = match vol {
+                        Some(v) => ep
+                            .SetMasterVolumeLevelScalar(v.clamp(0.0, 1.0), std::ptr::null())
+                            .and_then(|()| ep.SetMute(false, std::ptr::null())),
+                        None => Ok(()),
+                    };
+                    a.and_then(|()| match mute {
+                        Some(m) => ep.SetMute(m, std::ptr::null()),
+                        None => Ok(()),
+                    })
+                };
+                if let Err(e) = r {
+                    tracing::warn!("set volume: {e}");
+                    volume = None;
+                }
+            }
+        }
+        if let Some(b) = bright {
+            if wmi.is_none() {
+                wmi = wmi_services().ok();
+            }
+            if let Some(s) = &wmi
+                && let Err(e) = set_brightness(s, (b.clamp(0.0, 1.0) * 100.0).round() as u8)
+            {
+                tracing::warn!("set brightness: {e}");
+                wmi = None;
+            }
+        }
+    }
+}
+
+/// `WmiMonitorBrightnessMethods.WmiSetBrightness(Timeout, Brightness)`.
+fn set_brightness(services: &IWbemServices, percent: u8) -> windows::core::Result<()> {
+    use windows::Win32::Foundation::E_FAIL;
+    let fail = || windows::core::Error::from(E_FAIL);
+    // SAFETY: WMI calls on this thread's services; VARIANTs are cleared.
+    unsafe {
+        let rows = services.ExecQuery(
+            &BSTR::from("WQL"),
+            &BSTR::from("SELECT * FROM WmiMonitorBrightnessMethods"),
+            WBEM_GENERIC_FLAG_TYPE(WBEM_FLAG_FORWARD_ONLY.0 | WBEM_FLAG_RETURN_IMMEDIATELY.0),
+            None::<&IWbemContext>,
+        )?;
+        let mut objs = [None];
+        let mut n = 0u32;
+        let _ = rows.Next(WBEM_INFINITE, &mut objs, &mut n);
+        let instance = objs[0].take().ok_or_else(fail)?;
+        let mut path = VARIANT::default();
+        instance.Get(w!("__PATH"), 0, &mut path, None, None)?;
+        let path_str: BSTR = (*path.Anonymous.Anonymous.Anonymous.bstrVal).clone();
+        let _ = VariantClear(&mut path);
+
+        let mut class = None;
+        services.GetObject(
+            &BSTR::from("WmiMonitorBrightnessMethods"),
+            WBEM_GENERIC_FLAG_TYPE(0),
+            None::<&IWbemContext>,
+            Some(&mut class),
+            None,
+        )?;
+        let class = class.ok_or_else(fail)?;
+        let (mut input, mut output) = (None, None);
+        class.GetMethod(w!("WmiSetBrightness"), 0, &mut input, &mut output)?;
+        let params = input.ok_or_else(fail)?.SpawnInstance(0)?;
+
+        let mut timeout = VARIANT::default();
+        (*timeout.Anonymous.Anonymous).vt = VT_I4;
+        (*timeout.Anonymous.Anonymous).Anonymous.lVal = 1;
+        params.Put(w!("Timeout"), 0, &timeout, 0)?;
+        let mut level = VARIANT::default();
+        (*level.Anonymous.Anonymous).vt = VT_UI1;
+        (*level.Anonymous.Anonymous).Anonymous.bVal = percent.min(100);
+        params.Put(w!("Brightness"), 0, &level, 0)?;
+
+        services.ExecMethod(
+            &path_str,
+            &BSTR::from("WmiSetBrightness"),
+            WBEM_GENERIC_FLAG_TYPE(0),
+            None::<&IWbemContext>,
+            &params,
+            None,
+            None,
+        )
     }
 }

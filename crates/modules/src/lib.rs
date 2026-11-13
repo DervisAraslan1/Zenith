@@ -6,6 +6,7 @@ pub mod calculator;
 pub mod calendar;
 pub mod clipboard;
 pub mod coffee;
+pub mod controls;
 pub mod color_picker;
 pub mod draw;
 pub mod file_shelf;
@@ -37,15 +38,16 @@ use zenith_ui::module::Registry;
 pub const DEFAULT_ORDER: &[&str] = &[
     // First page, the Zenith layout (6x2 exactly). The packer fills column
     // by column: music (2x2) | focus over phone | weather over tools |
-    // clipboard over notes.
+    // clipboard over volume and brightness.
     "media",
     "timer",
     "phone_link",
     "weather",
     "tools",
     "clipboard",
-    "notes",
+    "controls",
     // Next pages.
+    "notes",
     "coffee",
     "ocr",
     "color_picker",
@@ -69,6 +71,7 @@ pub fn register_all(reg: &mut Registry) {
     reg.register(Box::<timer::Timer>::default());
     reg.register(Box::<weather::Weather>::default());
     reg.register(Box::<tools::Tools>::default());
+    reg.register(Box::<controls::Controls>::default());
     reg.register(Box::<coffee::Coffee>::default());
     reg.register(Box::<media::Media>::default());
     reg.register(Box::<notes::Notes>::default());

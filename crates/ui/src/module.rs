@@ -369,3 +369,15 @@ mod tests {
         assert_eq!(all, [("c", false), ("a", false), ("b", true), ("d", false)]);
     }
 }
+
+/// "Do not disturb": while true (a Pomodoro work round), modules keep their
+/// alerts to themselves (no chimes, no pulsing pill, no popping open).
+static QUIET: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_quiet(on: bool) {
+    QUIET.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn quiet() -> bool {
+    QUIET.load(std::sync::atomic::Ordering::Relaxed)
+}

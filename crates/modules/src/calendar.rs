@@ -790,8 +790,10 @@ impl Module for Calendar {
                 });
                 let day = e.day;
                 self.go_to(day, 0.0);
-                self.show = true;
-                system::alert_sound();
+                if !zenith_ui::module::quiet() {
+                    self.show = true;
+                    system::alert_sound();
+                }
             }
         }
     }

@@ -24,6 +24,7 @@ mod shot_editor;
 mod snipper;
 pub mod stub;
 pub mod system_monitor;
+pub mod tasks;
 pub mod text_extractor;
 pub mod timer;
 pub mod tools;
@@ -48,6 +49,7 @@ pub const DEFAULT_ORDER: &[&str] = &[
     "controls",
     // Next pages.
     "notes",
+    "tasks",
     "coffee",
     "ocr",
     "color_picker",
@@ -72,6 +74,7 @@ pub fn register_all(reg: &mut Registry) {
     reg.register(Box::<weather::Weather>::default());
     reg.register(Box::<tools::Tools>::default());
     reg.register(Box::<controls::Controls>::default());
+    reg.register(Box::<tasks::Tasks>::default());
     reg.register(Box::<coffee::Coffee>::default());
     reg.register(Box::<media::Media>::default());
     reg.register(Box::<notes::Notes>::default());

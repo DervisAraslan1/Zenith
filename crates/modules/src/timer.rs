@@ -19,6 +19,37 @@ use std::time::{Duration, Instant};
 
 const DEFAULT_SECS: u32 = 25 * 60;
 const MAX_SECS: u32 = 180 * 60;
+/// Pomodoro rounds: work, a short break, a long one after every fourth.
+const WORK_SECS: u32 = 25 * 60;
+const BREAK_SECS: u32 = 5 * 60;
+const LONG_BREAK_SECS: u32 = 15 * 60;
+
+/// Where a Pomodoro cycle is: round 1..=4, working or on a break.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Pomo {
+    round: u8,
+    work: bool,
+}
+
+impl Pomo {
+    const START: Pomo = Pomo { round: 1, work: true };
+
+    fn secs(self) -> u32 {
+        match (self.work, self.round) {
+            (true, _) => WORK_SECS,
+            (false, 4) => LONG_BREAK_SECS,
+            (false, _) => BREAK_SECS,
+        }
+    }
+
+    fn next(self) -> Pomo {
+        if self.work {
+            Pomo { work: false, ..self }
+        } else {
+            Pomo { round: self.round % 4 + 1, work: true }
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
@@ -245,6 +276,8 @@ pub struct Timer {
     wheel: f32,
     /// Text typed into the time after a double-click, while editing.
     editing: Option<String>,
+    /// Set in Pomodoro mode (a countdown that moves through rounds).
+    pomo: Option<Pomo>,
 }
 
 impl Default for Timer {
@@ -254,6 +287,7 @@ impl Default for Timer {
             epoch: Instant::now(),
             wheel: 0.0,
             editing: None,
+            pomo: None,
         }
     }
 }
@@ -316,6 +350,9 @@ impl Module for Timer {
     }
 
     fn name(&self) -> &str {
+        if self.pomo.is_some() {
+            return "Pomodoro";
+        }
         match self.clock.mode {
             Mode::Countdown => "Odak",
             Mode::Stopwatch => "Kronometre",
@@ -353,7 +390,18 @@ impl Module for Timer {
         if self.clock.poll(now) {
             tracing::info!("timer finished");
             system::alert_sound();
+            // Pomodoro: straight on to the next round.
+            if let Some(p) = self.pomo {
+                let next = p.next();
+                self.pomo = Some(next);
+                self.clock.set_secs(next.secs());
+                self.clock.toggle(now);
+            }
         }
+        // Do not disturb while a work round runs.
+        zenith_ui::module::set_quiet(
+            self.pomo.is_some_and(|p| p.work) && self.clock.is_running(),
+        );
     }
 
     fn next_repaint(&self, tile_visible: bool) -> Option<Duration> {
@@ -383,9 +431,10 @@ impl Module for Timer {
 
         // Corner: switch mode while idle, reset otherwise.
         let (corner_glyph, corner_tip) = if idle {
-            match self.clock.mode {
-                Mode::Countdown => (icons::TIMER, "Kronometreye geç"),
-                Mode::Stopwatch => (icons::HOURGLASS, "Geri sayıma geç"),
+            match (self.clock.mode, self.pomo.is_some()) {
+                (Mode::Countdown, false) => (icons::TARGET, "Pomodoro'ya geç"),
+                (Mode::Countdown, true) => (icons::TIMER, "Kronometreye geç"),
+                (Mode::Stopwatch, _) => (icons::HOURGLASS, "Geri sayıma geç"),
             }
         } else {
             (icons::ARROW_COUNTER_CLOCKWISE, "Sıfırla")
@@ -402,18 +451,31 @@ impl Module for Timer {
         .clicked();
         if corner_clicked {
             if idle {
-                self.clock.set_mode(if countdown {
-                    Mode::Stopwatch
-                } else {
-                    Mode::Countdown
-                });
+                match (self.clock.mode, self.pomo.is_some()) {
+                    (Mode::Countdown, false) => {
+                        self.pomo = Some(Pomo::START);
+                        self.clock.set_secs(Pomo::START.secs());
+                    }
+                    (Mode::Countdown, true) => {
+                        self.pomo = None;
+                        self.clock.set_mode(Mode::Stopwatch);
+                    }
+                    (Mode::Stopwatch, _) => {
+                        self.clock.set_mode(Mode::Countdown);
+                        self.clock.set_secs(DEFAULT_SECS);
+                    }
+                }
             } else {
                 self.clock.reset();
+                if self.pomo.is_some() {
+                    self.pomo = Some(Pomo::START);
+                    self.clock.set_secs(Pomo::START.secs());
+                }
             }
         }
 
         // Big figures, or the field to type a time into.
-        let editable = countdown && !self.clock.is_running() && !finished;
+        let editable = countdown && self.pomo.is_none() && !self.clock.is_running() && !finished;
         if !editable {
             self.editing = None;
         }
@@ -473,7 +535,15 @@ impl Module for Timer {
             );
         }
 
+        let pomo_sub = self.pomo.map(|p| match (p.work, self.clock.phase) {
+            (_, Phase::Paused { .. }) => "Duraklatıldı".to_owned(),
+            (true, Phase::Idle) => format!("Çalışma {}/4 · tıkla: başlat", p.round),
+            (true, _) => format!("Çalışma {}/4 · rahatsız etme açık", p.round),
+            (false, _) if p.round == 4 => "Uzun mola".to_owned(),
+            (false, _) => "Mola".to_owned(),
+        });
         let sub = match self.clock.phase {
+            _ if pomo_sub.is_some() => pomo_sub.as_deref().unwrap_or_default(),
             Phase::Idle if countdown => "Kaydır: süre ayarla",
             Phase::Idle => "Tıkla: başlat",
             Phase::Running { .. } => "Çalışıyor",
@@ -493,7 +563,7 @@ impl Module for Timer {
         }
 
         // Scroll over the tile to set the countdown.
-        if ctx.hovered && countdown && !finished && self.editing.is_none() {
+        if ctx.hovered && countdown && self.pomo.is_none() && !finished && self.editing.is_none() {
             let steps = self.wheel_steps(ui);
             if steps != 0 {
                 self.clock.adjust(steps);
@@ -515,6 +585,22 @@ impl Module for Timer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pomodoro_rounds() {
+        let mut p = Pomo::START;
+        let mut seen = Vec::new();
+        for _ in 0..8 {
+            seen.push((p.round, p.work, p.secs() / 60));
+            p = p.next();
+        }
+        assert_eq!(
+            seen,
+            [(1, true, 25), (1, false, 5), (2, true, 25), (2, false, 5),
+             (3, true, 25), (3, false, 5), (4, true, 25), (4, false, 15)]
+        );
+        assert_eq!(p, Pomo::START);
+    }
 
     #[test]
     fn countdown_runs_pauses_and_finishes() {

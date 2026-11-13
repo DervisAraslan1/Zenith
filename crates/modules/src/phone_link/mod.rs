@@ -1403,13 +1403,31 @@ impl PhoneLink {
             false,
             theme,
         )
-        .on_hover_text("Panodaki metni mesaj olarak gönder")
+        .on_hover_text(if self.target().is_none() && self.ready() {
+            "Panodaki metni telefondaki Zenith klasörüne metin dosyası olarak gönderir"
+        } else {
+            "Panodaki metni mesaj olarak gönder"
+        })
         .clicked()
         {
             match (clipboard::read_text(), self.target().cloned(), &self.ls) {
                 (Some(text), Some(peer), Some(ls)) if !text.trim().is_empty() => {
                     ls.send_text(peer, text);
                     self.say("Pano gönderildi");
+                }
+                // No LocalSend phone, but one on adb: Android gives no way to
+                // fill its clipboard from outside, so the text goes into the
+                // Zenith folder as a file instead.
+                (Some(text), None, _) if self.ready() && !text.trim().is_empty() => {
+                    let stamp = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    let path = std::env::temp_dir().join(format!("Pano-{stamp}.txt"));
+                    match std::fs::write(&path, text) {
+                        Ok(()) => self.push_over_adb(vec![path]),
+                        Err(e) => self.say(format!("Pano yazılamadı: {e}")),
+                    }
                 }
                 (_, None, _) => self.say("Gönderilecek cihazı seç"),
                 _ => self.say("Panoda metin yok"),
@@ -1995,7 +2013,9 @@ impl Module for PhoneLink {
                 label: format!("{:.0}%", p * 100.0),
             });
         }
-        (self.unseen > 0 || self.attention || !self.incoming.is_empty()).then_some(Badge::Pulse)
+        ((self.unseen > 0 || self.attention || !self.incoming.is_empty())
+            && !zenith_ui::module::quiet())
+        .then_some(Badge::Pulse)
     }
 
     fn on_tick(&mut self) {

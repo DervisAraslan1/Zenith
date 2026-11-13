@@ -20,18 +20,18 @@ const DURATIONS: [Option<u64>; 5] = [None, Some(15), Some(30), Some(60), Some(12
 fn duration_label(minutes: Option<u64>) -> String {
     match minutes {
         None => "Her zaman".into(),
-        Some(m) if m >= 60 => format!("{} h", m / 60),
-        Some(m) => format!("{m} min"),
+        Some(m) if m >= 60 => format!("{} sa", m / 60),
+        Some(m) => format!("{m} dk"),
     }
 }
 
-/// "1:05 left" / "12m left" (the tile is narrow).
+/// "1:05 kaldı" / "12 dk kaldı" (the tile is narrow).
 fn remaining_label(left: Duration) -> String {
     let mins = left.as_secs().div_ceil(60);
     if mins >= 60 {
-        format!("{}:{:02} left", mins / 60, mins % 60)
+        format!("{}:{:02} kaldı", mins / 60, mins % 60)
     } else {
-        format!("{mins}m left")
+        format!("{mins} dk kaldı")
     }
 }
 
@@ -237,9 +237,9 @@ mod tests {
     #[test]
     fn labels() {
         assert_eq!(duration_label(None), "Her zaman");
-        assert_eq!(duration_label(Some(30)), "30 min");
-        assert_eq!(duration_label(Some(120)), "2 h");
-        assert_eq!(remaining_label(Duration::from_secs(61)), "2m left");
-        assert_eq!(remaining_label(Duration::from_secs(3900)), "1:05 left");
+        assert_eq!(duration_label(Some(30)), "30 dk");
+        assert_eq!(duration_label(Some(120)), "2 sa");
+        assert_eq!(remaining_label(Duration::from_secs(61)), "2 dk kaldı");
+        assert_eq!(remaining_label(Duration::from_secs(3900)), "1:05 kaldı");
     }
 }

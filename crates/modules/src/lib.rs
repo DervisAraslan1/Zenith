@@ -25,40 +25,50 @@ pub mod stub;
 pub mod system_monitor;
 pub mod text_extractor;
 pub mod timer;
+pub mod tools;
 pub mod voice_memo;
 pub mod wallpaper;
+pub mod weather;
 
 use zenith_ui::module::Registry;
 
-/// Default tile order. Packs the first 8x3 grid exactly with the settings
-/// tile (added by the app) in the last cell; the rest go on the next page.
+/// Default tile order: the first 6x2 page is the Zenith layout; the rest
+/// (settings included, added by the app) go on the next pages.
 pub const DEFAULT_ORDER: &[&str] = &[
-    "timer",
-    "coffee",
+    // First page, the Zenith layout (6x2 exactly). The packer fills column
+    // by column: music (2x2) | focus over phone | weather over tools |
+    // clipboard over notes.
     "media",
-    "notes",
+    "timer",
+    "phone_link",
+    "weather",
+    "tools",
     "clipboard",
+    "notes",
+    // Next pages.
+    "coffee",
+    "ocr",
     "color_picker",
     "screenshot",
-    "ocr",
     "lens",
     "draw",
-    "phone_link",
-    "file_shelf",
-    "settings",
-    "font_detector",
-    "wallpaper",
+    "qr_code",
     "calculator",
     "system_monitor",
     "calendar",
     "quick_launch",
-    "qr_code",
     "voice_memo",
+    "file_shelf",
+    "font_detector",
+    "wallpaper",
+    "settings",
     "plugins",
 ];
 
 pub fn register_all(reg: &mut Registry) {
     reg.register(Box::<timer::Timer>::default());
+    reg.register(Box::<weather::Weather>::default());
+    reg.register(Box::<tools::Tools>::default());
     reg.register(Box::<coffee::Coffee>::default());
     reg.register(Box::<media::Media>::default());
     reg.register(Box::<notes::Notes>::default());

@@ -296,7 +296,7 @@ impl Module for Draw {
     }
 
     fn name(&self) -> &str {
-        "Draw on screen"
+        "Çizim"
     }
 
     fn icon(&self) -> &'static str {

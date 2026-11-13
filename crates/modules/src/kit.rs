@@ -389,3 +389,86 @@ pub fn write_settings(file: &str, pairs: &[(&str, String)]) {
         tracing::warn!("saving {}: {e}", path.display());
     }
 }
+
+/// Tag-sized text face: monospace in Mono, semibold otherwise.
+pub fn tag_font(theme: &Theme) -> egui::FontId {
+    if theme.style == zenith_ui::theme::Style::Mono {
+        Theme::font_mono(zenith_ui::theme::SIZE_TAG)
+    } else {
+        Theme::font_semibold(zenith_ui::theme::SIZE_TAG)
+    }
+}
+
+/// Dark glyph color on the bright accent fill.
+pub fn on_accent() -> egui::Color32 {
+    egui::Color32::from_rgb(20, 15, 8)
+}
+
+/// Round transport-style button (square-ish in Mono). `primary` fills it
+/// with the accent.
+pub fn round_button(
+    ui: &mut Ui,
+    center: egui::Pos2,
+    d: f32,
+    glyph: &str,
+    primary: bool,
+    theme: &Theme,
+) -> Response {
+    let rect = Rect::from_center_size(center, egui::vec2(d, d));
+    let resp = ui.interact(
+        rect,
+        ui.id().with(("round-button", glyph, center.x as i32)),
+        egui::Sense::click(),
+    );
+    let radius = if theme.style == zenith_ui::theme::Style::Mono {
+        4.0
+    } else {
+        d * 0.5
+    };
+    let (fill, fg) = if primary {
+        let f = if resp.hovered() {
+            zenith_ui::theme::mix(theme.accent, egui::Color32::WHITE, 0.15)
+        } else {
+            theme.accent
+        };
+        (f, on_accent())
+    } else {
+        let a = if resp.hovered() { 0.18 } else { 0.10 };
+        (zenith_ui::theme::with_alpha(theme.text, a), theme.text)
+    };
+    ui.painter().rect_filled(rect, radius, fill);
+    zenith_ui::paint::icon(ui.painter(), center, glyph, d * 0.36, fg, true);
+    resp
+}
+
+/// Track with an accent-to-accent2 fill up to `frac`.
+pub fn progress_bar(painter: &egui::Painter, rect: Rect, frac: f32, theme: &Theme) {
+    let radius = if theme.style == zenith_ui::theme::Style::Mono {
+        0.0
+    } else {
+        rect.height() * 0.5
+    };
+    painter.rect_filled(rect, radius, zenith_ui::theme::with_alpha(theme.text, 0.12));
+    let frac = frac.clamp(0.0, 1.0);
+    if frac <= 0.0 {
+        return;
+    }
+    let fill = Rect::from_min_size(rect.min, egui::vec2(rect.width() * frac, rect.height()));
+    let (c0, c1) = (theme.accent, zenith_ui::theme::mix(theme.accent, theme.accent2, frac));
+    let body = if radius > 0.0 {
+        // Round the ends: caps in the end colors, the body between them.
+        painter.circle_filled(egui::pos2(fill.min.x + radius, fill.center().y), radius, c0);
+        painter.circle_filled(egui::pos2(fill.max.x - radius, fill.center().y), radius, c1);
+        fill.shrink2(egui::vec2(radius.min(fill.width() * 0.5), 0.0))
+    } else {
+        fill
+    };
+    let mut m = egui::epaint::Mesh::default();
+    m.colored_vertex(body.left_top(), c0);
+    m.colored_vertex(body.right_top(), c1);
+    m.colored_vertex(body.right_bottom(), c1);
+    m.colored_vertex(body.left_bottom(), c0);
+    m.add_triangle(0, 1, 2);
+    m.add_triangle(0, 2, 3);
+    painter.add(egui::Shape::mesh(m));
+}

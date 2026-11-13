@@ -96,7 +96,7 @@ impl Module for SettingsTile {
     }
 
     fn name(&self) -> &str {
-        "Settings"
+        "Ayarlar"
     }
 
     fn icon(&self) -> &'static str {

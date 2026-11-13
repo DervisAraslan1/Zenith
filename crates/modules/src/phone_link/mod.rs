@@ -26,7 +26,7 @@ use localsend::{Direction, LocalSend, Peer, State, Transfer};
 use mirror::{Mirror, Status};
 use zenith_platform::{Hwnd, clipboard, files, shell, window};
 use zenith_ui::module::{Badge, Module, TileCtx, TileSize};
-use zenith_ui::theme::{SIZE_BODY, SIZE_ICON, SIZE_LABEL, Theme, mix, with_alpha};
+use zenith_ui::theme::{SIZE_BODY, SIZE_LABEL, Theme, mix, with_alpha};
 use zenith_ui::{anim, icons, paint, widgets};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -1877,7 +1877,7 @@ impl Module for PhoneLink {
     }
 
     fn name(&self) -> &str {
-        "Phone link"
+        "Telefon"
     }
 
     fn icon(&self) -> &'static str {
@@ -2064,21 +2064,21 @@ impl Module for PhoneLink {
         };
         paint::icon(
             ui.painter(),
-            rect.center(),
+            pos2(rect.min.x + 14.0, rect.center().y - 6.0),
             glyph,
-            SIZE_ICON + 2.0,
+            28.0,
             color,
             active,
         );
         // Green dot: a phone is connected over adb.
         if self.ready() {
-            let c = rect.center() + vec2(-11.0, 10.0);
+            let c = pos2(rect.min.x + 27.0, rect.center().y + 7.0);
             ui.painter()
                 .circle_filled(c, 3.5, Color32::from_rgb(98, 214, 132));
         }
         let count = self.unseen + self.incoming.len();
         if count > 0 {
-            let c = rect.center() + vec2(11.0, -9.0);
+            let c = pos2(rect.min.x + 30.0, rect.center().y - 19.0);
             ui.painter().circle_filled(c, 7.5, theme.accent);
             ui.painter().text(
                 c,
@@ -2088,6 +2088,20 @@ impl Module for PhoneLink {
                 Color32::WHITE,
             );
         }
+        let status = match (self.device(), &self.info) {
+            (Some(d), Some(i)) if d.state == DeviceState::Ready => i
+                .battery
+                .map(|b| format!("Bağlı · %{b}"))
+                .unwrap_or_else(|| "Bağlı".to_owned()),
+            _ => "Bağlı değil".to_owned(),
+        };
+        ui.painter().text(
+            pos2(rect.min.x, rect.max.y - 6.0),
+            Align2::LEFT_CENTER,
+            status,
+            Theme::font(SIZE_LABEL),
+            theme.text_dim,
+        );
         if resp.clicked() || resp.secondary_clicked() {
             self.open_page = true;
         }

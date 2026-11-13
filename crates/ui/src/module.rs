@@ -82,6 +82,16 @@ pub trait Module: Send {
     fn take_page_request(&mut self) -> bool {
         false
     }
+    /// Draw the tile's name above a small tile. False: the module uses
+    /// the whole face.
+    fn show_label(&self) -> bool {
+        true
+    }
+    /// Asks the app to run another module's action (its hotkey), or
+    /// `"settings"` to open the settings page. Once per request.
+    fn take_launch(&mut self) -> Option<&'static str> {
+        None
+    }
     /// Asks the app to open the panel (pinned) on this module's page, e.g.
     /// when results arrive from a hotkey. Return true once per request.
     fn take_show_request(&mut self) -> bool {

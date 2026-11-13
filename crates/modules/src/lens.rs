@@ -146,7 +146,7 @@ impl Module for Lens {
     }
 
     fn name(&self) -> &str {
-        "Lens search"
+        "Lens"
     }
 
     fn icon(&self) -> &'static str {

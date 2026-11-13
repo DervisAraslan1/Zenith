@@ -100,7 +100,7 @@ impl Module for FontDetector {
     }
 
     fn name(&self) -> &str {
-        "Font detector"
+        "Font bulucu"
     }
 
     fn icon(&self) -> &'static str {

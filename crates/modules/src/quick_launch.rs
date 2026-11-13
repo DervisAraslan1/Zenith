@@ -532,7 +532,7 @@ impl Module for QuickLaunch {
     }
 
     fn name(&self) -> &str {
-        "Quick launch"
+        "Hızlı başlat"
     }
 
     fn icon(&self) -> &'static str {

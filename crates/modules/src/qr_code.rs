@@ -1461,7 +1461,7 @@ impl Module for QrCodeModule {
     }
 
     fn name(&self) -> &str {
-        "QR code"
+        "QR kod"
     }
 
     fn icon(&self) -> &'static str {

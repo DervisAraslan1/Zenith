@@ -327,7 +327,7 @@ impl Module for FileShelf {
     }
 
     fn name(&self) -> &str {
-        "File shelf"
+        "Dosya rafı"
     }
 
     fn icon(&self) -> &'static str {

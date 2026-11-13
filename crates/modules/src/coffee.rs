@@ -108,7 +108,7 @@ impl Module for Coffee {
     }
 
     fn name(&self) -> &str {
-        "Coffee"
+        "Kahve"
     }
 
     fn icon(&self) -> &'static str {

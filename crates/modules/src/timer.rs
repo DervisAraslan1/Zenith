@@ -12,10 +12,9 @@ use egui::{
     vec2,
 };
 use zenith_platform::system;
-use zenith_ui::bento::tile_header;
 use zenith_ui::module::{Badge, Module, TileCtx, TileSize};
-use zenith_ui::theme::{Theme, with_alpha};
-use zenith_ui::{icons, paint, widgets};
+use zenith_ui::theme::Theme;
+use zenith_ui::{icons, widgets};
 use std::time::{Duration, Instant};
 
 const DEFAULT_SECS: u32 = 25 * 60;
@@ -318,8 +317,8 @@ impl Module for Timer {
 
     fn name(&self) -> &str {
         match self.clock.mode {
-            Mode::Countdown => "Timer",
-            Mode::Stopwatch => "Stopwatch",
+            Mode::Countdown => "Odak",
+            Mode::Stopwatch => "Kronometre",
         }
     }
 
@@ -328,7 +327,7 @@ impl Module for Timer {
     }
 
     fn size_hint(&self) -> TileSize {
-        TileSize::Large
+        TileSize::Small
     }
 
     fn is_active(&self) -> bool {
@@ -368,104 +367,75 @@ impl Module for Timer {
     }
 
     fn ui_tile(&mut self, ui: &mut Ui, ctx: &mut TileCtx<'_>) {
+        use zenith_ui::theme::SIZE_LABEL;
         let theme = ctx.theme;
         let now = self.now();
         let rect = ui.max_rect();
-        let active = self.is_active();
-        let glyph = match self.clock.mode {
-            Mode::Countdown => icons::HOURGLASS,
-            Mode::Stopwatch => icons::TIMER,
-        };
-        tile_header(ui, glyph, self.name(), active, theme);
+        let finished = self.clock.phase == Phase::Finished;
+        let idle = self.clock.phase == Phase::Idle;
+        let countdown = self.clock.mode == Mode::Countdown;
 
-        // Mode switch, top right: shows the other mode's glyph.
-        let other = match self.clock.mode {
-            Mode::Countdown => (icons::TIMER, Mode::Stopwatch),
-            Mode::Stopwatch => (icons::HOURGLASS, Mode::Countdown),
+        // The whole tile starts and pauses. Registered first, so the corner
+        // button (added later) takes its own clicks.
+        let tile = ui
+            .interact(rect.expand(16.0), ui.id().with("timer-tile"), Sense::click())
+            .on_hover_text("Tıkla: başlat / duraklat · Sağ tık: süre yaz");
+
+        // Corner: switch mode while idle, reset otherwise.
+        let (corner_glyph, corner_tip) = if idle {
+            match self.clock.mode {
+                Mode::Countdown => (icons::TIMER, "Kronometreye geç"),
+                Mode::Stopwatch => (icons::HOURGLASS, "Geri sayıma geç"),
+            }
+        } else {
+            (icons::ARROW_COUNTER_CLOCKWISE, "Sıfırla")
         };
-        if !active
-            && button_at(
-                ui,
-                pos2(rect.max.x - 8.0, rect.min.y + 9.0),
-                20.0,
-                other.0,
-                false,
-                theme,
-            )
-            .on_hover_text(match other.1 {
-                Mode::Countdown => "Countdown",
-                Mode::Stopwatch => "Stopwatch",
-            })
-            .clicked()
-        {
-            self.clock.set_mode(other.1);
+        let corner_clicked = button_at(
+            ui,
+            pos2(rect.max.x - 8.0, rect.min.y - 18.0),
+            20.0,
+            corner_glyph,
+            false,
+            theme,
+        )
+        .on_hover_text(corner_tip)
+        .clicked();
+        if corner_clicked {
+            if idle {
+                self.clock.set_mode(if countdown {
+                    Mode::Stopwatch
+                } else {
+                    Mode::Countdown
+                });
+            } else {
+                self.clock.reset();
+            }
         }
 
-        // Ring with the time inside.
-        let center = pos2(rect.center().x, rect.min.y + 50.0);
-        let radius = 25.0;
-        let finished = self.clock.phase == Phase::Finished;
-        let pulse = if finished {
-            ((ctx.now * 3.0).sin() * 0.5 + 0.5) as f32
-        } else {
-            1.0
-        };
-        let painter = ui.painter();
-        paint::ring(
-            painter,
-            center,
-            radius,
-            3.0,
-            if finished {
-                1.0
-            } else {
-                self.clock.progress(now)
-            },
-            with_alpha(theme.text_faint, 0.35),
-            with_alpha(theme.accent_fg(), 0.4 + 0.6 * pulse),
-        );
-        let (text, color) = if finished {
-            ("Done".to_owned(), theme.accent_fg())
-        } else {
-            let dim = matches!(self.clock.phase, Phase::Paused { .. });
-            (
-                self.label(now),
-                if dim { theme.text_dim } else { theme.text },
-            )
-        };
-
-        // Double-click the time to type one (a countdown that is not running).
-        let editable = self.clock.mode == Mode::Countdown && !self.clock.is_running();
+        // Big figures, or the field to type a time into.
+        let editable = countdown && !self.clock.is_running() && !finished;
         if !editable {
             self.editing = None;
         }
         let edit_id = Id::new("zenith-timer-edit");
+        let num_y = rect.center().y - 4.0;
         let mut just_opened = false;
-        if editable && self.editing.is_none() {
-            let time_rect = Rect::from_center_size(center, vec2(radius * 2.0, radius * 2.0));
-            if ui
-                .interact(time_rect, Id::new("zenith-timer-time"), Sense::click())
-                .on_hover_text("Double-click to type a time: 5, 5:30, 90s or 1h30m")
-                .double_clicked()
-            {
-                self.editing = Some(format_secs(self.clock.duration(), true));
-                ui.memory_mut(|m| m.request_focus(edit_id));
-                just_opened = true;
-            }
+        if editable && self.editing.is_none() && tile.secondary_clicked() {
+            self.editing = Some(format_secs(self.clock.duration(), true));
+            ui.memory_mut(|m| m.request_focus(edit_id));
+            just_opened = true;
         }
         if let Some(input) = &mut self.editing {
-            let field = Rect::from_center_size(center, vec2(44.0, 22.0));
+            let field = Rect::from_min_size(pos2(rect.min.x, num_y - 17.0), vec2(rect.width(), 34.0));
             let mut child = ui.new_child(UiBuilder::new().max_rect(field));
             let mut out = TextEdit::singleline(input)
                 .id(edit_id)
-                .font(Theme::font_semibold(14.0))
+                .font(theme.numeral_font(26.0))
                 .text_color(theme.text)
-                .horizontal_align(egui::Align::Center)
                 .desired_width(field.width())
                 .char_limit(10)
                 .show(&mut child);
             if just_opened {
-                // Select it all so typing replaces the old time.
                 let all = egui::text::CCursorRange::two(
                     egui::text::CCursor::new(0),
                     egui::text::CCursor::new(input.chars().count()),
@@ -474,8 +444,6 @@ impl Module for Timer {
                 out.state.store(ui.ctx(), edit_id);
             }
             if out.response.lost_focus() {
-                // Enter or a click elsewhere applies; Esc (or nonsense) keeps
-                // the old time.
                 let cancelled = ui.input(|i| i.key_pressed(Key::Escape));
                 if !cancelled && let Some(secs) = parse_duration(input) {
                     self.clock.set_secs(secs);
@@ -483,18 +451,49 @@ impl Module for Timer {
                 self.editing = None;
             }
         } else {
-            let size = if text.len() > 5 { 12.0 } else { 15.0 };
+            let text = if finished {
+                "Bitti".to_owned()
+            } else {
+                self.label(now)
+            };
+            let size = if text.chars().count() > 5 { 28.0 } else { 38.0 };
+            let color = if finished {
+                theme.accent_fg()
+            } else if matches!(self.clock.phase, Phase::Paused { .. }) {
+                theme.text_dim
+            } else {
+                theme.text
+            };
             ui.painter().text(
-                center,
-                Align2::CENTER_CENTER,
+                pos2(rect.min.x - 1.0, num_y),
+                Align2::LEFT_CENTER,
                 text,
-                Theme::font_semibold(size),
+                theme.numeral_font(size),
                 color,
             );
         }
 
+        let sub = match self.clock.phase {
+            Phase::Idle if countdown => "Kaydır: süre ayarla",
+            Phase::Idle => "Tıkla: başlat",
+            Phase::Running { .. } => "Çalışıyor",
+            Phase::Paused { .. } => "Duraklatıldı",
+            Phase::Finished => "Tıkla: kapat",
+        };
+        ui.painter().text(
+            pos2(rect.min.x, rect.max.y - 6.0),
+            Align2::LEFT_CENTER,
+            sub,
+            Theme::font(SIZE_LABEL),
+            theme.text_dim,
+        );
+        if countdown && !idle && !finished {
+            let bar = Rect::from_min_size(pos2(rect.min.x, rect.max.y + 6.0), vec2(rect.width(), 3.0));
+            crate::kit::progress_bar(ui.painter(), bar, self.clock.progress(now), theme);
+        }
+
         // Scroll over the tile to set the countdown.
-        if ctx.hovered && self.clock.mode == Mode::Countdown && !finished && self.editing.is_none() {
+        if ctx.hovered && countdown && !finished && self.editing.is_none() {
             let steps = self.wheel_steps(ui);
             if steps != 0 {
                 self.clock.adjust(steps);
@@ -503,64 +502,11 @@ impl Module for Timer {
             self.wheel = 0.0;
         }
 
-        // Controls: [minus | reset]  [play/pause | dismiss]  [plus | snooze].
-        let y = rect.max.y - 11.0;
-        let cx = rect.center().x;
-        let gap = 34.0;
-        let idle = self.clock.phase == Phase::Idle;
-        let countdown = self.clock.mode == Mode::Countdown;
-
-        let (left, left_tip) = if idle && countdown {
-            (Some(icons::MINUS), "1 minute less")
-        } else if idle {
-            (None, "")
-        } else {
-            (Some(icons::ARROW_COUNTER_CLOCKWISE), "Reset")
-        };
-        if let Some(g) = left
-            && button_at(ui, pos2(cx - gap, y), 24.0, g, false, theme)
-                .on_hover_text(left_tip)
-                .clicked()
-        {
-            if idle {
-                self.clock.adjust(-1);
-            } else {
-                self.clock.reset();
-            }
-        }
-
-        let (mid, mid_tip) = match self.clock.phase {
-            Phase::Running { .. } => (icons::PAUSE, "Pause"),
-            Phase::Finished => (icons::CHECK, "Dismiss"),
-            Phase::Paused { .. } => (icons::PLAY, "Resume"),
-            Phase::Idle => (icons::PLAY, "Start"),
-        };
-        if button_at(ui, pos2(cx, y), 28.0, mid, true, theme)
-            .on_hover_text(mid_tip)
-            .clicked()
-        {
+        if tile.clicked() && !corner_clicked && self.editing.is_none() {
             if finished {
                 self.clock.reset();
             } else {
                 self.clock.toggle(now);
-            }
-        }
-
-        if countdown {
-            let tip = if finished {
-                "One more minute"
-            } else {
-                "1 minute more"
-            };
-            if button_at(ui, pos2(cx + gap, y), 24.0, icons::PLUS, false, theme)
-                .on_hover_text(tip)
-                .clicked()
-            {
-                if finished {
-                    self.clock.snooze(now);
-                } else {
-                    self.clock.adjust(1);
-                }
             }
         }
     }

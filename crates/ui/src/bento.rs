@@ -20,13 +20,13 @@ use crate::shell::ContentCtx;
 use crate::spring::SpringParams;
 use crate::theme::{self, SIZE_ICON, SIZE_LABEL, TILE_PADDING, Theme, with_alpha};
 use egui::emath::TSTransform;
-use egui::{Align2, Area, Color32, Id, Order, Rect, Sense, Ui, UiBuilder, Vec2, pos2, vec2};
+use egui::{Align2, Area, Color32, Id, Order, Pos2, Rect, Sense, Ui, UiBuilder, Vec2, pos2, vec2};
 
 pub const GRID: GridSpec = GridSpec {
-    columns: 8,
-    rows: 3,
-    cell: 60.0,
-    gap: 8.0,
+    columns: 6,
+    rows: 2,
+    cell: 138.0,
+    gap: 10.0,
 };
 
 /// Inset of the grid inside the panel (top/left/right). The bottom gutter is
@@ -128,26 +128,28 @@ fn tile_glass(painter: &egui::Painter, rect: Rect, theme: &Theme, active: bool, 
     if lift > 0.01 {
         paint::glow(painter, &shape, theme.accent, lift * 0.6);
     }
-    let (top, bottom) = if active {
-        theme.active_tile()
-    } else {
-        (theme.tile_top, theme.tile_bottom)
-    };
+    // Active tiles keep the glass and get an accent rim instead of a fill.
+    let (top, bottom) = (theme.tile_top, theme.tile_bottom);
     // Hover brightens the top of the gradient a touch.
     let top = theme::mix(top, with_alpha(theme.text, 0.16), lift * 0.4);
     paint::fill_gradient(painter, &outline, top, bottom);
     painter.add(egui::epaint::PathShape::closed_line(
         outline,
-        egui::epaint::PathStroke::new(1.0, theme.tile_rim),
+        egui::epaint::PathStroke::new(
+            1.0,
+            if active {
+                with_alpha(theme.accent, 0.55)
+            } else {
+                theme.tile_rim
+            },
+        ),
     ));
     paint::top_highlight(painter, &shape, with_alpha(theme.highlight, 0.5));
 }
 
 fn tile_inner(rect: Rect, size: TileSize) -> Rect {
-    rect.shrink(match size {
-        TileSize::Small => 8.0,
-        _ => TILE_PADDING,
-    })
+    let _ = (size, TILE_PADDING);
+    rect.shrink(16.0)
 }
 
 pub fn show(
@@ -499,7 +501,19 @@ pub fn show(
                     }
 
                     let inner = tile_inner(rect, size);
-                    let mut child = ui.new_child(UiBuilder::new().max_rect(inner).id_salt(id));
+                    // Small tiles get their name as a tag; the body sits below it.
+                    let labelled = !editing
+                        && !compact
+                        && ready
+                        && size == TileSize::Small
+                        && tile.module.show_label();
+                    let body = if labelled {
+                        tile_tag(ui.painter(), inner.min, tile.module.name(), theme);
+                        Rect::from_min_max(pos2(inner.min.x, inner.min.y + 24.0), inner.max)
+                    } else {
+                        inner
+                    };
+                    let mut child = ui.new_child(UiBuilder::new().max_rect(body).id_salt(id));
                     if !held {
                         child.set_clip_rect(rect.intersect(clip));
                     }
@@ -823,38 +837,22 @@ fn coming_soon(ui: &mut Ui, inner: Rect, icon: &'static str, theme: &Theme, hove
 
 /// Standard tile header for modules: icon (regular/fill by state) and name.
 pub fn tile_header(ui: &mut Ui, icon: &'static str, name: &str, active: bool, theme: &Theme) {
-    let rect = ui.max_rect();
-    let painter = ui.painter();
-    let color = if active {
-        theme.accent_fg()
+    let _ = (icon, active);
+    tile_tag(ui.painter(), ui.max_rect().min, name, theme);
+}
+
+/// The small uppercase tag at a tile's top left ("ODAK", "PANO").
+pub fn tile_tag(painter: &egui::Painter, pos: Pos2, name: &str, theme: &Theme) {
+    let font = if theme.style == theme::Style::Mono {
+        Theme::font_mono(theme::SIZE_TAG)
     } else {
-        theme.text_dim
+        Theme::font_semibold(theme::SIZE_TAG)
     };
-    let icon_center = pos2(rect.min.x + 9.0, rect.min.y + 9.0);
-    let (prev, t) = anim::icon_crossfade(ui.ctx(), ui.id().with("hdr"), icon);
-    if let Some(prev) = prev {
-        paint::icon(
-            painter,
-            icon_center,
-            prev,
-            SIZE_ICON,
-            with_alpha(color, 1.0 - t),
-            !active,
-        );
-    }
-    paint::icon(
-        painter,
-        icon_center,
-        icon,
-        SIZE_ICON,
-        with_alpha(color, t),
-        active,
-    );
     painter.text(
-        pos2(rect.min.x + 24.0, rect.min.y + 9.0),
+        pos + vec2(0.0, 6.0),
         Align2::LEFT_CENTER,
-        name,
-        Theme::font_semibold(SIZE_LABEL),
-        theme.text_dim,
+        theme::upper_tr(name),
+        font,
+        theme.text_faint,
     );
 }

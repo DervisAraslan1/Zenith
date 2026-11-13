@@ -791,7 +791,7 @@ impl Module for Wallpaper {
     }
 
     fn name(&self) -> &str {
-        "Wallpaper"
+        "Duvar kâğıdı"
     }
 
     fn icon(&self) -> &'static str {

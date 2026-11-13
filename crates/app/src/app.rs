@@ -1165,6 +1165,19 @@ impl eframe::App for ZenithApp {
         if let Some(id) = page_request {
             self.page = Page::Module(id);
         }
+        // Shortcut tiles (Tools) run another module's action.
+        let launches: Vec<&'static str> = self
+            .registry
+            .all_mut()
+            .filter_map(|m| m.take_launch())
+            .collect();
+        for id in launches {
+            if id == SETTINGS_ID {
+                self.page = Page::Settings;
+            } else if let Some(m) = self.registry.get_mut(id) {
+                m.on_hotkey();
+            }
+        }
         for m in self.registry.all_mut() {
             m.ui_overlay(&ctx, &theme);
         }

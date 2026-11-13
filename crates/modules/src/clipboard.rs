@@ -194,7 +194,7 @@ impl Module for Clipboard {
     }
 
     fn name(&self) -> &str {
-        "Clipboard"
+        "Pano"
     }
 
     fn icon(&self) -> &'static str {
@@ -202,7 +202,7 @@ impl Module for Clipboard {
     }
 
     fn size_hint(&self) -> TileSize {
-        TileSize::Large
+        TileSize::Wide
     }
 
     fn attach(&mut self, ctx: &egui::Context) {
@@ -235,7 +235,7 @@ impl Module for Clipboard {
         let theme = ctx.theme;
         let now = ctx.now;
         let rect = ui.max_rect();
-        tile_header(ui, icons::CLIPBOARD_TEXT, "Clipboard", false, theme);
+        tile_header(ui, icons::CLIPBOARD_TEXT, "Pano", false, theme);
         if self.copied.is_some_and(|(_, at)| now - at >= COPIED_FOR) {
             self.copied = None;
         }
@@ -247,7 +247,7 @@ impl Module for Clipboard {
             icons::ARROWS_OUT_SIMPLE,
             theme,
         )
-        .on_hover_text("Show all")
+        .on_hover_text("Tümünü göster")
         .clicked()
         {
             self.open_page = true;
@@ -257,7 +257,7 @@ impl Module for Clipboard {
             ui.painter().text(
                 rect.center() + vec2(0.0, 10.0),
                 Align2::CENTER_CENTER,
-                "Copy something",
+                "Bir şey kopyala",
                 Theme::font(SIZE_LABEL),
                 theme.text_faint,
             );
@@ -265,17 +265,24 @@ impl Module for Clipboard {
         }
 
         // Latest three entries as rows.
-        let row_h = 24.0;
-        let top = rect.min.y + 26.0;
+        let row_h = 32.0;
+        let top = rect.min.y + 24.0;
+        let shown = if rect.height() > 150.0 { 5 } else { 2 };
         let mut clicked = None;
         let ctx_egui = ui.ctx().clone();
-        let rows: Vec<u64> = self.history.entries.iter().take(3).map(|e| e.id).collect();
+        let rows: Vec<u64> = self.history.entries.iter().take(shown).map(|e| e.id).collect();
         for (i, id) in rows.into_iter().enumerate() {
             let row = Rect::from_min_size(
-                pos2(rect.min.x - 4.0, top + i as f32 * (row_h + 2.0)),
-                vec2(rect.width() + 8.0, row_h),
+                pos2(rect.min.x, top + i as f32 * (row_h + 6.0)),
+                vec2(rect.width(), row_h),
             );
-            let resp = hover_box(ui, row, ui.id().with(("clip-row", id)), 8.0, theme);
+            let card_radius = (theme.tile_radius * 0.6).min(12.0);
+            ui.painter().rect_filled(
+                row,
+                card_radius,
+                with_alpha(theme.text, if i == 0 { 0.09 } else { 0.05 }),
+            );
+            let resp = hover_box(ui, row, ui.id().with(("clip-row", id)), card_radius, theme);
             if resp.clicked() {
                 clicked = Some(id);
             }
@@ -283,7 +290,7 @@ impl Module for Clipboard {
             let Some(entry) = self.history.entries.iter_mut().find(|e| e.id == id) else {
                 continue;
             };
-            let text_x = row.min.x + 6.0;
+            let text_x = row.min.x + 12.0;
             if copied {
                 paint::icon(
                     ui.painter(),
@@ -296,7 +303,7 @@ impl Module for Clipboard {
                 ui.painter().text(
                     pos2(text_x + 18.0, row.center().y),
                     Align2::LEFT_CENTER,
-                    "Copied",
+                    "Kopyalandı",
                     Theme::font(SIZE_LABEL),
                     theme.accent_fg(),
                 );
@@ -305,12 +312,12 @@ impl Module for Clipboard {
             match entry.content.clone() {
                 ClipContent::Text(t) => text_block(
                     ui,
-                    pos2(text_x, row.center().y - 7.0),
+                    pos2(text_x, row.center().y - 8.0),
                     &one_line(&t),
-                    row.width() - 12.0,
+                    row.width() - 24.0,
                     1,
-                    Theme::font(SIZE_LABEL),
-                    theme.text,
+                    Theme::font(SIZE_LABEL + 2.0),
+                    if i == 0 { theme.text } else { theme.text_dim },
                 ),
                 ClipContent::Image(_) => {
                     if let Some((tex, img)) = entry.texture(&ctx_egui) {

@@ -1120,7 +1120,7 @@ impl Module for Calculator {
     }
 
     fn name(&self) -> &str {
-        "Calculator"
+        "Hesap makinesi"
     }
 
     fn icon(&self) -> &'static str {
@@ -1161,7 +1161,7 @@ impl Module for Calculator {
         let rect = ui.max_rect();
         if rect.width() > rect.height() * 1.5 {
             // Wide: the last answer.
-            tile_header(ui, icons::CALCULATOR, "Calculator", false, theme);
+            tile_header(ui, icons::CALCULATOR, "Hesap makinesi", false, theme);
             let resp = ui.interact(rect.expand(12.0), ui.id().with("calc-tile"), Sense::click());
             let last = self
                 .history

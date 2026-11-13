@@ -12,6 +12,8 @@ pub const TILE_RADIUS: f32 = 16.0;
 pub const TILE_PADDING: f32 = 12.0;
 
 pub const SIZE_LABEL: f32 = 11.0;
+/// Small caps tags above tiles ("ODAK", "PANO").
+pub const SIZE_TAG: f32 = 10.5;
 pub const SIZE_BODY: f32 = 13.0;
 pub const SIZE_BIG: f32 = 28.0;
 pub const SIZE_ICON: f32 = 18.0;
@@ -387,6 +389,18 @@ impl Ink {
             pill_text_dim: self.pill_text_dim,
         }
     }
+}
+
+/// Uppercase with Turkish dotted/dotless i ("İstanbul" -> "İSTANBUL",
+/// "Notlar" -> "NOTLAR", "ıi" -> "Iİ").
+pub fn upper_tr(s: &str) -> String {
+    s.chars()
+        .flat_map(|c| match c {
+            'i' => vec!['İ'],
+            'ı' => vec!['I'],
+            c => c.to_uppercase().collect(),
+        })
+        .collect()
 }
 
 /// Multiplies a color's alpha (unmultiplied semantics).

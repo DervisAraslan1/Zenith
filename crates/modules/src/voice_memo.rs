@@ -712,7 +712,7 @@ impl Module for VoiceMemo {
     }
 
     fn name(&self) -> &str {
-        "Voice memo"
+        "Ses kaydı"
     }
 
     fn icon(&self) -> &'static str {

@@ -167,7 +167,7 @@ impl Module for Screenshot {
     }
 
     fn name(&self) -> &str {
-        "Screenshot"
+        "Ekran görüntüsü"
     }
 
     fn icon(&self) -> &'static str {

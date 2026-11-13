@@ -538,7 +538,7 @@ impl Module for SystemMonitor {
     }
 
     fn name(&self) -> &str {
-        "System monitor"
+        "Sistem"
     }
 
     fn icon(&self) -> &'static str {

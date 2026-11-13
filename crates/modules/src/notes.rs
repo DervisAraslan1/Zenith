@@ -328,7 +328,7 @@ impl Module for Notes {
     }
 
     fn name(&self) -> &str {
-        "Notes"
+        "Notlar"
     }
 
     fn icon(&self) -> &'static str {
@@ -374,24 +374,42 @@ impl Module for Notes {
     fn ui_tile(&mut self, ui: &mut Ui, ctx: &mut TileCtx<'_>) {
         let theme = ctx.theme;
         let rect = ui.max_rect();
-        tile_header(ui, icons::NOTE_PENCIL, "Notes", false, theme);
+        tile_header(ui, icons::NOTE_PENCIL, "Notlar", false, theme);
         let resp = ui.interact(
             rect.expand(12.0),
             ui.id().with("notes-tile"),
             Sense::click(),
         );
-        let (preview, color) = match self.notes.iter().find(|n| !n.text.trim().is_empty()) {
-            Some(n) => (n.title(), theme.text_dim),
-            None => ("Write something".to_owned(), theme.text_faint),
+        let latest = self.notes.iter().find(|n| !n.text.trim().is_empty());
+        let when = latest.map(|n| n.modified);
+        let (preview, color) = match latest {
+            Some(n) => (n.text.trim().to_owned(), theme.text),
+            None => (
+                "Bir şeyler yaz".to_owned(),
+                if ctx.hovered { theme.text } else { theme.text_faint },
+            ),
         };
-        one_line(
-            ui,
-            pos2(rect.min.x, rect.min.y + 21.0),
-            &preview,
-            rect.width(),
-            Theme::font(SIZE_LABEL),
-            if ctx.hovered { theme.text } else { color },
+        let mut job = LayoutJob::single_section(
+            preview,
+            TextFormat::simple(Theme::font(SIZE_BODY + 1.0), color),
         );
+        job.wrap = TextWrapping {
+            max_width: rect.width(),
+            max_rows: if rect.height() > 150.0 { 8 } else { 3 },
+            break_anywhere: false,
+            overflow_character: Some('…'),
+        };
+        let galley = ui.painter().layout_job(job);
+        ui.painter().galley(pos2(rect.min.x, rect.min.y + 22.0), galley, theme.text);
+        if let Some(t) = when {
+            ui.painter().text(
+                pos2(rect.min.x, rect.max.y - 6.0),
+                Align2::LEFT_CENTER,
+                ago_tr(t),
+                Theme::font(SIZE_LABEL),
+                theme.text_faint,
+            );
+        }
         if resp.clicked() {
             self.open_latest();
         }
@@ -471,5 +489,19 @@ mod tests {
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].title(), "Hello");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// "Az önce", "5 dk önce", "3 sa önce", "2 gün önce".
+fn ago_tr(t: SystemTime) -> String {
+    let s = SystemTime::now()
+        .duration_since(t)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    match s {
+        0..=59 => "Az önce".to_owned(),
+        60..=3599 => format!("{} dk önce", s / 60),
+        3600..=86399 => format!("{} sa önce", s / 3600),
+        _ => format!("{} gün önce", s / 86400),
     }
 }

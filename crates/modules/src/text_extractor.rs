@@ -68,7 +68,7 @@ impl Module for TextExtractor {
     }
 
     fn name(&self) -> &str {
-        "Text extractor"
+        "Metin çıkar"
     }
 
     fn icon(&self) -> &'static str {

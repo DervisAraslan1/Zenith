@@ -42,7 +42,7 @@ impl Module for PluginsTile {
     }
 
     fn name(&self) -> &str {
-        "Plugins"
+        "Eklentiler"
     }
 
     fn icon(&self) -> &'static str {

@@ -201,7 +201,7 @@ impl Module for ColorPicker {
     }
 
     fn name(&self) -> &str {
-        "Color picker"
+        "Renk seçici"
     }
 
     fn icon(&self) -> &'static str {

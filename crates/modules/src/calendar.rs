@@ -737,7 +737,7 @@ impl Module for Calendar {
     }
 
     fn name(&self) -> &str {
-        "Calendar"
+        "Takvim"
     }
 
     fn icon(&self) -> &'static str {

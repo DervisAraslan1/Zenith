@@ -62,7 +62,7 @@ impl Default for ShellMetrics {
         Self {
             collapsed: vec2(140.0, 34.0),
             hover_swell: vec2(12.0, 2.0),
-            expanded: vec2(568.0, 236.0),
+            expanded: vec2(910.0, 326.0),
             collapsed_radius: 17.0,
             expanded_radius: 32.0,
             top_margin: 6.0,

@@ -8,17 +8,14 @@
 
 use egui::text::{LayoutJob, TextFormat, TextWrapping};
 use egui::{
-    Align2, Color32, ColorImage, Pos2, Rect, Response, TextureHandle, TextureOptions, Ui,
-    UiBuilder, pos2, vec2,
+    Align2, Color32, ColorImage, Pos2, Rect, TextureHandle, TextureOptions, Ui, pos2, vec2,
 };
 use zenith_platform::media::{MediaCommand, MediaWatcher, NowPlaying};
 use zenith_ui::module::{Module, TileCtx, TileSize};
 use zenith_ui::theme::{SIZE_LABEL, Theme, with_alpha};
-use zenith_ui::{icons, paint, widgets};
+use zenith_ui::{icons, paint};
 use std::sync::Arc;
 use std::time::Duration;
-
-const ART: f32 = 44.0;
 
 #[derive(Default)]
 pub struct Media {
@@ -61,19 +58,6 @@ fn text_line(ui: &Ui, pos: Pos2, text: &str, width: f32, font: egui::FontId, col
     ui.painter().galley(pos, galley, color);
 }
 
-fn button_at(
-    ui: &mut Ui,
-    center: Pos2,
-    size: f32,
-    glyph: &'static str,
-    active: bool,
-    theme: &Theme,
-) -> Response {
-    let rect = Rect::from_center_size(center, vec2(size, size));
-    let mut child = ui.new_child(UiBuilder::new().max_rect(rect).id_salt(glyph));
-    widgets::icon_button(&mut child, glyph, size, active, theme)
-}
-
 fn mmss(secs: f64) -> String {
     let s = secs.max(0.0) as u64;
     format!("{}:{:02}", s / 60, s % 60)
@@ -94,7 +78,7 @@ impl Module for Media {
     }
 
     fn name(&self) -> &str {
-        "Media"
+        "Müzik"
     }
 
     fn icon(&self) -> &'static str {
@@ -133,6 +117,8 @@ impl Module for Media {
     }
 
     fn ui_tile(&mut self, ui: &mut Ui, ctx: &mut TileCtx<'_>) {
+        use crate::kit::{progress_bar, round_button, tag_font};
+        use zenith_ui::theme::{Style, upper_tr};
         let theme = ctx.theme;
         let rect = ui.max_rect();
 
@@ -140,116 +126,94 @@ impl Module for Media {
             let c = rect.center();
             paint::icon(
                 ui.painter(),
-                c - vec2(0.0, 8.0),
+                c - vec2(0.0, 10.0),
                 icons::MUSIC_NOTES,
-                24.0,
+                30.0,
                 theme.text_faint,
                 false,
             );
             ui.painter().text(
-                c + vec2(0.0, 18.0),
+                c + vec2(0.0, 22.0),
                 Align2::CENTER_CENTER,
-                "Nothing playing",
-                Theme::font(SIZE_LABEL),
+                "Şu an çalan yok",
+                Theme::font(SIZE_LABEL + 1.0),
                 theme.text_dim,
             );
             return;
         };
 
-        // Album art, or a placeholder.
-        let art_rect = Rect::from_min_size(rect.min, vec2(ART, ART));
+        // Art: a disc with a soft accent halo (a square in Mono).
+        let round = theme.style != Style::Mono;
+        let art_d = (rect.width() * 0.34).clamp(60.0, 92.0);
+        let art_rect = Rect::from_min_size(rect.min + vec2(2.0, 2.0), vec2(art_d, art_d));
+        let art_radius = if round { art_d * 0.5 } else { 6.0 };
+        if round {
+            ui.painter().circle_filled(
+                art_rect.center(),
+                art_d * 0.5 + 4.0,
+                with_alpha(theme.accent, 0.16),
+            );
+        }
         match self.art_texture(ui.ctx()) {
-            Some(tex) => rounded_image(ui, art_rect, tex, 10.0),
+            Some(tex) => rounded_image(ui, art_rect, tex, art_radius),
             None => {
-                widgets::card(ui.painter(), art_rect, theme);
+                ui.painter()
+                    .rect_filled(art_rect, art_radius, with_alpha(theme.text, 0.08));
                 paint::icon(
                     ui.painter(),
                     art_rect.center(),
                     icons::MUSIC_NOTES,
-                    20.0,
+                    art_d * 0.32,
                     theme.text_faint,
                     false,
                 );
             }
         }
 
-        // Right of the art: source app, time, progress bar.
-        let col = rect.min.x + ART + 8.0;
-        let col_w = rect.max.x - col;
-        text_line(
-            ui,
-            pos2(col, rect.min.y + 2.0),
-            &now.source,
-            col_w,
-            Theme::font(SIZE_LABEL - 1.0),
-            theme.text_faint,
-        );
-        if let Some((pos, dur)) = now.position() {
-            ui.painter().text(
-                pos2(col, rect.min.y + 24.0),
-                Align2::LEFT_CENTER,
-                format!("{} / {}", mmss(pos), mmss(dur)),
-                Theme::font(SIZE_LABEL - 1.0),
-                theme.text_dim,
-            );
-            let bar = Rect::from_min_size(pos2(col, rect.min.y + 36.0), vec2(col_w, 3.0));
-            ui.painter()
-                .rect_filled(bar, 1.5, with_alpha(theme.text_faint, 0.3));
-            let frac = (pos / dur.max(1.0)).clamp(0.0, 1.0) as f32;
-            let mut fill = bar;
-            fill.set_width(bar.width() * frac);
-            ui.painter().rect_filled(fill, 1.5, theme.accent_fg());
-        } else {
-            ui.painter().text(
-                pos2(col, rect.min.y + 24.0),
-                Align2::LEFT_CENTER,
-                if now.playing { "Playing" } else { "Paused" },
-                Theme::font(SIZE_LABEL - 1.0),
-                theme.text_dim,
-            );
-        }
-
-        // Title and artist.
+        // Beside the art: source tag, title, artist.
+        let col = art_rect.max.x + 14.0;
+        let col_w = (rect.max.x - col).max(10.0);
+        let cy = art_rect.center().y;
         let title = if now.title.is_empty() {
-            "Unknown title"
+            "Bilinmeyen parça"
         } else {
             &now.title
         };
-        text_line(
-            ui,
-            pos2(rect.min.x, rect.min.y + ART + 6.0),
-            title,
-            rect.width(),
-            Theme::font_semibold(SIZE_LABEL + 1.0),
-            theme.text,
-        );
-        text_line(
-            ui,
-            pos2(rect.min.x, rect.min.y + ART + 21.0),
-            &now.artist,
-            rect.width(),
-            Theme::font(SIZE_LABEL),
-            theme.text_dim,
-        );
+        text_line(ui, pos2(col, cy - 30.0), &upper_tr(&app_name(&now.source)), col_w, tag_font(theme), theme.text_faint);
+        text_line(ui, pos2(col, cy - 13.0), title, col_w, Theme::font_semibold(17.0), theme.text);
+        text_line(ui, pos2(col, cy + 9.0), &now.artist, col_w, Theme::font(13.0), theme.text_dim);
+
+        // Progress and times.
+        let ctrl_y = rect.max.y - 25.0;
+        if let Some((pos, dur)) = now.position() {
+            let bar_y = ctrl_y - 50.0;
+            let bar = Rect::from_min_size(pos2(rect.min.x, bar_y), vec2(rect.width(), 5.0));
+            progress_bar(ui.painter(), bar, (pos / dur.max(1.0)) as f32, theme);
+            let tf = if theme.style == Style::Mono {
+                Theme::font_mono(SIZE_LABEL - 0.5)
+            } else {
+                Theme::font(SIZE_LABEL - 0.5)
+            };
+            ui.painter().text(pos2(rect.min.x, bar_y + 16.0), Align2::LEFT_CENTER, mmss(pos), tf.clone(), theme.text_faint);
+            ui.painter().text(pos2(rect.max.x, bar_y + 16.0), Align2::RIGHT_CENTER, mmss(dur), tf, theme.text_faint);
+        }
 
         // Transport.
-        let y = rect.max.y - 11.0;
         let cx = rect.center().x;
-        let gap = 34.0;
         if now.can_previous
-            && button_at(ui, pos2(cx - gap, y), 24.0, icons::SKIP_BACK, false, theme)
-                .on_hover_text("Previous")
+            && round_button(ui, pos2(cx - 62.0, ctrl_y), 38.0, icons::SKIP_BACK, false, theme)
+                .on_hover_text("Önceki")
                 .clicked()
         {
             self.send(MediaCommand::Previous);
         }
         let (glyph, tip) = if now.playing {
-            (icons::PAUSE, "Pause")
+            (icons::PAUSE, "Duraklat")
         } else {
-            (icons::PLAY, "Play")
+            (icons::PLAY, "Çal")
         };
         if now.can_toggle
-            && button_at(ui, pos2(cx, y), 28.0, glyph, true, theme)
+            && round_button(ui, pos2(cx, ctrl_y), 50.0, glyph, true, theme)
                 .on_hover_text(tip)
                 .clicked()
         {
@@ -264,18 +228,24 @@ impl Module for Media {
             }
         }
         if now.can_next
-            && button_at(
-                ui,
-                pos2(cx + gap, y),
-                24.0,
-                icons::SKIP_FORWARD,
-                false,
-                theme,
-            )
-            .on_hover_text("Next")
-            .clicked()
+            && round_button(ui, pos2(cx + 62.0, ctrl_y), 38.0, icons::SKIP_FORWARD, false, theme)
+                .on_hover_text("Sonraki")
+                .clicked()
         {
             self.send(MediaCommand::Next);
         }
     }
+}
+
+/// A readable app name from an SMTC source id: "operasoftware.operagx..."
+/// -> "operagx", "Spotify" stays.
+fn app_name(source: &str) -> String {
+    let s = source.trim().trim_end_matches(".exe");
+    // Skip empty and numeric parts ("OperaGX.1793482591" -> "OperaGX").
+    let last = s
+        .rsplit('.')
+        .find(|p| !p.is_empty() && !p.chars().all(|c| c.is_ascii_digit()))
+        .unwrap_or(s);
+    let name = last.split(['_', '!']).next().unwrap_or(last);
+    if name.is_empty() { s.to_owned() } else { name.to_owned() }
 }

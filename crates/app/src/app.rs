@@ -895,6 +895,7 @@ fn draw_media(
     artist: &str,
     art: Option<egui::TextureId>,
     wave: &[f32; 5],
+    battery: Option<Battery>,
     ui: &Ui,
     rect: Rect,
     theme: &Theme,
@@ -924,9 +925,28 @@ fn draw_media(
             );
         }
     }
+    // Battery at the far right, so music never hides it.
+    let mut right = rect.max.x - 15.0;
+    if let Some(b) = battery {
+        let text = egui::text::LayoutJob::simple_singleline(
+            format!("%{}", b.percent),
+            Theme::font(SIZE_LABEL),
+            theme.pill_text_dim,
+        );
+        let galley = painter.layout_job(text);
+        let w = galley.size().x;
+        painter.galley(
+            pos2(right - w, cy - galley.size().y * 0.5),
+            galley,
+            theme.pill_text_dim,
+        );
+        let (icon, color) = battery_icon(b, theme);
+        paint::icon(painter, pos2(right - w - 11.0, cy), icon, 14.0, color, b.charging);
+        right -= w + 30.0;
+    }
     let (bar_w, gap) = (3.0, 3.0);
     let wave_w = 5.0 * bar_w + 4.0 * gap;
-    let wx = rect.max.x - 15.0 - wave_w;
+    let wx = right - wave_w;
     for (i, v) in wave.iter().enumerate() {
         let h = 3.0 + 14.0 * v.clamp(0.0, 1.0);
         let x = wx + i as f32 * (bar_w + gap) + bar_w * 0.5;
@@ -963,7 +983,7 @@ fn draw_pill(
             artist,
             art,
             wave,
-        } => return draw_media(title, artist, *art, wave, ui, rect, theme),
+        } => return draw_media(title, artist, *art, wave, battery, ui, rect, theme),
         Live::None => {}
     }
     const PAD: f32 = 15.0;
@@ -1410,7 +1430,7 @@ impl eframe::App for ZenithApp {
         self.shell.metrics.collapsed.x = match live {
             Live::Level(_) => 250.0,
             Live::Charging { .. } => 230.0,
-            Live::Media { .. } => 300.0,
+            Live::Media { .. } => 340.0,
             Live::None => 140.0,
         };
         self.shell.metrics.expanded_radius = theme.panel_radius;

@@ -51,6 +51,8 @@ pub struct BentoOutput {
     pub edits: Vec<Edit>,
     /// The pencil (or the Done check) was clicked.
     pub toggle_edit: bool,
+    /// The pin button was clicked.
+    pub toggle_pin: bool,
 }
 
 /// Grid origin within a panel rect.
@@ -278,10 +280,69 @@ pub fn show(
             editing,
         );
         if resp
-            .on_hover_text(if editing { "Done" } else { "Edit the layout" })
+            .on_hover_text(if editing { "Bitti" } else { "Düzeni düzenle" })
             .clicked()
         {
             out.toggle_edit = true;
+        }
+    }
+    // Pin button beside the pencil: a labelled chip, so it reads at a glance.
+    if !editing {
+        let pinned = cctx.pinned;
+        let label = if pinned { "Sabitlendi" } else { "Sabitle" };
+        let font = Theme::font_semibold(SIZE_LABEL);
+        let text_w = ui
+            .painter()
+            .layout_no_wrap(label.to_owned(), font.clone(), Color32::WHITE)
+            .size()
+            .x;
+        let rect = Rect::from_min_size(
+            pos2(grid.min.x + 26.0, gutter_y - 10.0),
+            vec2(10.0 + 14.0 + 6.0 + text_w + 11.0, 20.0),
+        );
+        let resp = ui.interact(rect, Id::new("zenith-bento-pin"), Sense::click());
+        let (bg, fg) = if pinned {
+            (with_alpha(theme.accent, 0.22), theme.accent_fg())
+        } else if resp.hovered() {
+            (with_alpha(theme.text, 0.13), theme.text)
+        } else {
+            (with_alpha(theme.text, 0.07), theme.text_dim)
+        };
+        let radius = if theme.style == theme::Style::Mono { 3.0 } else { 10.0 };
+        let a = cctx.alpha;
+        ui.painter().rect_filled(rect, radius, with_alpha(bg, a));
+        if pinned {
+            ui.painter().rect_stroke(
+                rect,
+                radius,
+                egui::Stroke::new(1.0, with_alpha(theme.accent, 0.5 * a)),
+                egui::StrokeKind::Inside,
+            );
+        }
+        paint::icon(
+            ui.painter(),
+            pos2(rect.min.x + 17.0, rect.center().y),
+            icons::PUSH_PIN,
+            12.0,
+            with_alpha(fg, a),
+            pinned,
+        );
+        ui.painter().text(
+            pos2(rect.min.x + 30.0, rect.center().y),
+            Align2::LEFT_CENTER,
+            label,
+            font,
+            with_alpha(fg, a),
+        );
+        if resp
+            .on_hover_text(if pinned {
+                "Sabitlemeyi kaldır · Ctrl+Alt+N"
+            } else {
+                "Paneli açık tut · Ctrl+Alt+N"
+            })
+            .clicked()
+        {
+            out.toggle_pin = true;
         }
     }
     if pages.len() > 1 {

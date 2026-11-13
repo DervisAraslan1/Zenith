@@ -236,7 +236,9 @@ impl AudioMeter {
             unsafe {
                 let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
             }
-            self.meter = endpoint::<IAudioMeterInformation>().ok();
+            self.meter = endpoint::<IAudioMeterInformation>()
+                .inspect_err(|e| tracing::warn!("levels: meter endpoint: {e}"))
+                .ok();
             self.refresh_at = now + ENDPOINT_REFRESH * 2;
         }
         match &self.meter {

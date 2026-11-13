@@ -99,6 +99,8 @@ pub struct ContentCtx {
     /// The shell's current rect: content outside it is not on glass yet
     /// (a tall page still springing open).
     pub shape: Rect,
+    /// The panel is pinned open (the bento shows it on its pin button).
+    pub pinned: bool,
 }
 
 impl ContentCtx {
@@ -353,19 +355,9 @@ impl Shell {
                 closing: !targets.content_open,
                 transform,
                 shape: shape.rect,
+                pinned: self.state.is_pinned(),
             };
             content(ui, &cctx);
-        }
-
-        if self.state.is_pinned() && progress > 0.85 {
-            paint::icon(
-                &painter,
-                pos2(shape.rect.center().x, shape.rect.min.y + 8.0),
-                egui_phosphor::fill::PUSH_PIN,
-                9.0,
-                crate::theme::with_alpha(theme.text_faint, content_alpha),
-                true,
-            );
         }
 
         ShellOutput {

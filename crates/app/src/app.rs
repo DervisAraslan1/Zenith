@@ -1293,13 +1293,19 @@ impl eframe::App for ZenithApp {
             (Some((change, _)), _) => Live::Level(change),
             (None, Some((title, artist, art))) => {
                 if collapsed {
-                    // Bars follow the real output level, with a little motion
-                    // of their own so they never look frozen.
+                    // Bars follow the real output level on a decibel scale
+                    // (-48..0 dB -> 0..1, as the ear hears it), with a little
+                    // motion of their own so they never look frozen.
                     let peak = self.meter.peak();
+                    let loud = if peak > 0.0 {
+                        ((20.0 * peak.log10() + 48.0) / 48.0).clamp(0.0, 1.0)
+                    } else {
+                        0.0
+                    };
                     const SHAPE: [f32; 5] = [0.55, 0.9, 0.7, 1.0, 0.6];
                     for (i, w) in self.wave.iter_mut().enumerate() {
                         let wobble = 0.75 + 0.25 * ((t_now * 7.0 + i as f64 * 1.3).sin() as f32);
-                        let target = (peak * 1.7 * SHAPE[i] * wobble).min(1.0);
+                        let target = (loud * SHAPE[i] * wobble).min(1.0);
                         *w += (target - *w) * 0.35;
                     }
                     ctx.request_repaint_after(Duration::from_millis(33));
@@ -1376,6 +1382,12 @@ impl eframe::App for ZenithApp {
         }
         if grid_out.toggle_edit {
             self.set_editing(!self.editing, &ctx);
+        }
+        if grid_out.toggle_pin {
+            self.shell.state.toggle_pin(Self::now(&ctx));
+            if let Some(t) = &self.tray {
+                t.set_pinned(self.shell.state.is_pinned());
+            }
         }
         if !grid_out.edits.is_empty() {
             self.apply_layout_edits(grid_out.edits);

@@ -149,6 +149,10 @@ impl Module for Lens {
         "Lens"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Seçtiğin yeri Google'da arar")
+    }
+
     fn icon(&self) -> &'static str {
         icons::SCAN
     }

@@ -45,6 +45,10 @@ impl Module for PluginsTile {
         "Eklentiler"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Eklenti kur ve yönet")
+    }
+
     fn icon(&self) -> &'static str {
         ph::PUZZLE_PIECE
     }

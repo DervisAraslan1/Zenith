@@ -570,7 +570,12 @@ pub fn show(
                         && tile.module.show_label();
                     let body = if labelled {
                         tile_tag(ui.painter(), inner.min, tile.module.name(), theme);
-                        Rect::from_min_max(pos2(inner.min.x, inner.min.y + 24.0), inner.max)
+                        let mut b =
+                            Rect::from_min_max(pos2(inner.min.x, inner.min.y + 24.0), inner.max);
+                        if let Some(h) = tile.module.hint() {
+                            b.max.y -= tile_hint(ui.painter(), inner, h, theme) + 4.0;
+                        }
+                        b
                     } else {
                         inner
                     };
@@ -900,6 +905,26 @@ fn coming_soon(ui: &mut Ui, inner: Rect, icon: &'static str, theme: &Theme, hove
 pub fn tile_header(ui: &mut Ui, icon: &'static str, name: &str, active: bool, theme: &Theme) {
     let _ = (icon, active);
     tile_tag(ui.painter(), ui.max_rect().min, name, theme);
+}
+
+/// A small tile's what-it-does line at the bottom (up to two lines).
+/// Returns the height it took.
+fn tile_hint(painter: &egui::Painter, inner: Rect, text: &str, theme: &Theme) -> f32 {
+    use egui::text::{LayoutJob, TextFormat, TextWrapping};
+    let mut job = LayoutJob::single_section(
+        text.to_owned(),
+        TextFormat::simple(Theme::font(SIZE_LABEL - 1.0), theme.text_faint),
+    );
+    job.wrap = TextWrapping {
+        max_width: inner.width(),
+        max_rows: 2,
+        break_anywhere: false,
+        overflow_character: Some('…'),
+    };
+    let galley = painter.layout_job(job);
+    let h = galley.size().y;
+    painter.galley(pos2(inner.min.x, inner.max.y - h), galley, theme.text_faint);
+    h
 }
 
 /// The small uppercase tag at a tile's top left ("ODAK", "PANO").

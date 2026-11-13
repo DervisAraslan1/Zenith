@@ -330,6 +330,10 @@ impl Module for FileShelf {
         "Dosya rafı"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Dosyaları geçici olarak bekletir")
+    }
+
     fn icon(&self) -> &'static str {
         icons::TRAY
     }

@@ -794,6 +794,10 @@ impl Module for Wallpaper {
         "Duvar kâğıdı"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Duvar kâğıdını değiştirir")
+    }
+
     fn icon(&self) -> &'static str {
         icons::IMAGE
     }

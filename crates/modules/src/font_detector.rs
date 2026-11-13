@@ -103,6 +103,10 @@ impl Module for FontDetector {
         "Font bulucu"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Ekrandaki yazının fontunu bulur")
+    }
+
     fn icon(&self) -> &'static str {
         icons::TEXT_T
     }

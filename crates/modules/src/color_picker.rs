@@ -204,6 +204,10 @@ impl Module for ColorPicker {
         "Renk seçici"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Ekrandaki bir rengi kopyalar")
+    }
+
     fn icon(&self) -> &'static str {
         icons::EYEDROPPER
     }

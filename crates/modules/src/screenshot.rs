@@ -170,6 +170,10 @@ impl Module for Screenshot {
         "Ekran görüntüsü"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Ekranın görüntüsünü alır")
+    }
+
     fn icon(&self) -> &'static str {
         icons::SELECTION
     }

@@ -535,6 +535,10 @@ impl Module for QuickLaunch {
         "Hızlı başlat"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Sık kullandıklarını tek tıkla açar")
+    }
+
     fn icon(&self) -> &'static str {
         icons::ROCKET_LAUNCH
     }

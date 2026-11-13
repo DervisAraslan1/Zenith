@@ -743,6 +743,10 @@ impl Module for Calendar {
         "Takvim"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Etkinlik ekle, hatırlatma al")
+    }
+
     fn icon(&self) -> &'static str {
         icons::CALENDAR_BLANK
     }
@@ -827,7 +831,8 @@ impl Module for Calendar {
             .events
             .iter()
             .find(|e| e.day == day && e.time.is_none_or(|t| t * 60 >= secs));
-        if rect.width() > rect.height() * 1.5 {
+        // Wide tile only (a small one's body is short too, after its tag and hint).
+        if rect.width() > rect.height() * 1.5 && rect.width() > 180.0 {
             // Wide: the date on the left, the next event on the right.
             let c = pos2(rect.min.x + 20.0, rect.center().y);
             painter.text(

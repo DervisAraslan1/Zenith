@@ -299,6 +299,10 @@ impl Module for Draw {
         "Çizim"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Ekranın üstüne çizim yapar")
+    }
+
     fn icon(&self) -> &'static str {
         icons::SCRIBBLE
     }

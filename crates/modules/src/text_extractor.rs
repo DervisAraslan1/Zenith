@@ -71,6 +71,10 @@ impl Module for TextExtractor {
         "Metin çıkar"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Ekrandaki yazıyı seçip kopyalar")
+    }
+
     fn icon(&self) -> &'static str {
         icons::TEXT_AA
     }

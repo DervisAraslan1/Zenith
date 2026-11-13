@@ -94,6 +94,10 @@ pub trait Module: Send {
     fn show_label(&self) -> bool {
         true
     }
+    /// One short line under a small tile saying what it does.
+    fn hint(&self) -> Option<&str> {
+        None
+    }
     /// Asks the app to run another module's action (its hotkey), or
     /// `"settings"` to open the settings page. Once per request.
     fn take_launch(&mut self) -> Option<&'static str> {

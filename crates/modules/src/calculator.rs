@@ -1123,6 +1123,10 @@ impl Module for Calculator {
         "Hesap makinesi"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Hesap yapar, birim çevirir")
+    }
+
     fn icon(&self) -> &'static str {
         icons::CALCULATOR
     }
@@ -1159,7 +1163,8 @@ impl Module for Calculator {
     fn ui_tile(&mut self, ui: &mut Ui, ctx: &mut TileCtx<'_>) {
         let theme = ctx.theme;
         let rect = ui.max_rect();
-        if rect.width() > rect.height() * 1.5 {
+        // Wide tile only (a small one's body is short too, after its tag and hint).
+        if rect.width() > rect.height() * 1.5 && rect.width() > 180.0 {
             // Wide: the last answer.
             tile_header(ui, icons::CALCULATOR, "Hesap makinesi", false, theme);
             let resp = ui.interact(rect.expand(12.0), ui.id().with("calc-tile"), Sense::click());

@@ -99,6 +99,10 @@ impl Module for SettingsTile {
         "Ayarlar"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Görünüm ve davranış")
+    }
+
     fn icon(&self) -> &'static str {
         icons::GEAR_SIX
     }

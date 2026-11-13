@@ -716,6 +716,10 @@ impl Module for VoiceMemo {
         "Ses kaydı"
     }
 
+    fn hint(&self) -> Option<&str> {
+        Some("Mikrofondan ses kaydı alır")
+    }
+
     fn icon(&self) -> &'static str {
         icons::MICROPHONE
     }

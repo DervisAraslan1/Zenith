@@ -142,6 +142,8 @@ enum Picked {
 }
 
 pub struct PhoneLink {
+    /// Result line of a running `adb push` (files sent over USB / Wi-Fi debugging).
+    push_rx: Option<Receiver<String>>,
     ctx: Option<egui::Context>,
     settings: Settings,
     ls: Option<LocalSend>,
@@ -215,6 +217,7 @@ impl Default for PhoneLink {
             tab: Tab::default(),
             pair_code: String::new(),
             toast: None,
+            push_rx: None,
             picker: None,
             page_pass: None,
             fast: false,
@@ -266,10 +269,64 @@ impl PhoneLink {
                 ls.send_files(peer, paths, None);
                 self.tab = Tab::Files;
             }
+            // No LocalSend phone picked, but one is connected for mirroring:
+            // copy the files with adb, no app needed on the phone.
+            _ if self.ready() => self.push_over_adb(paths),
             _ => {
                 self.queued.extend(paths);
                 self.say("Gönderilecek cihazı seç");
             }
+        }
+    }
+
+/// Copies files (folders too) into the phone's Download folder with
+    /// `adb push`, on a worker thread.
+    fn push_over_adb(&mut self, paths: Vec<PathBuf>) {
+        let exe = self.adb.as_ref().and_then(|a| a.exe.clone());
+        let (Some(exe), Some(serial)) = (exe, self.serial.clone()) else {
+            self.say("adb bulunamadı");
+            return;
+        };
+        let n = paths.len();
+        self.say(format!("{n} öğe telefona gönderiliyor…"));
+        let (tx, rx) = mpsc::channel();
+        self.push_rx = Some(rx);
+        let ctx = self.ctx.clone();
+        let spawned = std::thread::Builder::new()
+            .name("zenith-adb-push".into())
+            .spawn(move || {
+                use std::os::windows::process::CommandExt;
+                const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+                let mut failed = Vec::new();
+                for path in &paths {
+                    let ok = std::process::Command::new(&exe)
+                        .args(["-s", &serial, "push"])
+                        .arg(path)
+                        .arg("/sdcard/Download/")
+                        .creation_flags(CREATE_NO_WINDOW)
+                        .output()
+                        .map(|o| o.status.success())
+                        .unwrap_or(false);
+                    if !ok {
+                        failed.push(
+                            path.file_name()
+                                .map(|f| f.to_string_lossy().into_owned())
+                                .unwrap_or_default(),
+                        );
+                    }
+                }
+                let msg = if failed.is_empty() {
+                    format!("{n} öğe telefonun İndirilenler klasörüne gönderildi")
+                } else {
+                    format!("Gönderilemedi: {}", failed.join(", "))
+                };
+                let _ = tx.send(msg);
+                if let Some(c) = ctx {
+                    c.request_repaint();
+                }
+            });
+        if let Err(e) = spawned {
+            tracing::warn!("adb push thread: {e}");
         }
     }
 
@@ -1290,9 +1347,11 @@ impl PhoneLink {
             },
             hovering,
         );
+        let over_adb = target.is_none() && self.ready();
         let title = match (&target, hovering) {
             (Some(t), true) => format!("{t} cihazına göndermek için bırak"),
             (Some(t), false) => format!("{t} cihazına göndermek için dosyaları buraya bırak"),
+            (None, _) if over_adb => "Telefonuna göndermek için dosyaları buraya bırak".to_owned(),
             (None, _) => "Dosyaları buraya bırak".to_owned(),
         };
         let text_w = zone.width() - 60.0 - 230.0;
@@ -1306,6 +1365,8 @@ impl PhoneLink {
         );
         let sub = if target.is_some() {
             "Klasörler yapısını korur. Telefonda LocalSend uygulaması açık olmalı."
+        } else if over_adb {
+            "USB / Wi-Fi bağlantısıyla telefonun İndirilenler klasörüne gider. Uygulama gerekmez."
         } else {
             "Telefonunda LocalSend'i aç, sonra yukarıdan seç."
         };
@@ -1935,6 +1996,12 @@ impl Module for PhoneLink {
     fn on_tick(&mut self) {
         self.drain_localsend();
         self.drain_adb();
+        if let Some(rx) = &self.push_rx
+            && let Ok(msg) = rx.try_recv()
+        {
+            self.push_rx = None;
+            self.say(msg);
+        }
         if let Some(rx) = &self.picker
             && let Ok(p) = rx.try_recv()
         {

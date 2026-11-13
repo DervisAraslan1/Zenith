@@ -50,11 +50,11 @@ enum Body {
 }
 
 const BODIES: [(Body, &str); 5] = [
-    (Body::Dots, "Dots"),
-    (Body::Liquid, "Liquid"),
-    (Body::Lines, "Lines"),
-    (Body::Rounded, "Rounded"),
-    (Body::Square, "Square"),
+    (Body::Dots, "Noktalar"),
+    (Body::Liquid, "Akışkan"),
+    (Body::Lines, "Çizgiler"),
+    (Body::Rounded, "Yuvarlatılmış"),
+    (Body::Square, "Kare"),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,10 +66,10 @@ enum Eyes {
 }
 
 const EYES: [(Eyes, &str); 4] = [
-    (Eyes::Round, "Round"),
-    (Eyes::Circle, "Circle"),
-    (Eyes::Leaf, "Leaf"),
-    (Eyes::Square, "Square"),
+    (Eyes::Round, "Yuvarlak"),
+    (Eyes::Circle, "Daire"),
+    (Eyes::Leaf, "Yaprak"),
+    (Eyes::Square, "Kare"),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -81,10 +81,10 @@ enum Background {
 }
 
 const BACKGROUNDS: [(Background, &str); 4] = [
-    (Background::White, "White"),
-    (Background::Cream, "Cream"),
-    (Background::Night, "Night"),
-    (Background::Clear, "Clear"),
+    (Background::White, "Beyaz"),
+    (Background::Cream, "Krem"),
+    (Background::Night, "Gece"),
+    (Background::Clear, "Şeffaf"),
 ];
 
 impl Background {
@@ -101,12 +101,12 @@ impl Background {
 /// Gradient stops; equal stops are a solid color. The accent palette is
 /// filled in from the theme.
 const PALETTES: [(&str, [u8; 3], [u8; 3]); 6] = [
-    ("Ink", [17, 17, 20], [17, 17, 20]),
-    ("Accent", [0, 0, 0], [0, 0, 0]),
-    ("Violet", [124, 58, 237], [219, 39, 119]),
-    ("Ocean", [6, 182, 212], [37, 99, 235]),
-    ("Forest", [16, 185, 129], [6, 95, 70]),
-    ("Sunset", [245, 158, 11], [225, 29, 72]),
+    ("Mürekkep", [17, 17, 20], [17, 17, 20]),
+    ("Vurgu", [0, 0, 0], [0, 0, 0]),
+    ("Mor", [124, 58, 237], [219, 39, 119]),
+    ("Okyanus", [6, 182, 212], [37, 99, 235]),
+    ("Orman", [16, 185, 129], [6, 95, 70]),
+    ("Gün batımı", [245, 158, 11], [225, 29, 72]),
 ];
 const ACCENT: usize = 1;
 
@@ -764,7 +764,7 @@ struct Logo {
 }
 
 fn load_logo(path: &Path) -> Result<RgbaImage, String> {
-    let img = image::open(path).map_err(|_| "Use a PNG, JPG or BMP logo".to_owned())?;
+    let img = image::open(path).map_err(|_| "PNG, JPG ya da BMP logo kullan".to_owned())?;
     // Big logos only cost time: the plate is a few hundred pixels at most.
     let img = if img.width().max(img.height()) > 600 {
         img.resize(600, 600, image::imageops::FilterType::Triangle)
@@ -912,7 +912,7 @@ impl QrCodeModule {
                 QrCodeEcc::Medium
             };
             let res = QrCode::encode_text(&text, ecc)
-                .map_err(|_| "Too long for a QR code. Try a shorter link.".to_owned());
+                .map_err(|_| "QR kod için çok uzun. Daha kısa bir bağlantı dene.".to_owned());
             self.code = Some((text, high, res));
         }
         self.code.as_ref().map(|(_, _, r)| r)
@@ -948,8 +948,8 @@ impl QrCodeModule {
             pixels,
         };
         match clipboard::copy_image(&frame) {
-            Ok(()) => self.toast("Copied. Paste it anywhere."),
-            Err(e) => self.toast(format!("Could not copy: {e}")),
+            Ok(()) => self.toast("Kopyalandı. İstediğin yere yapıştır."),
+            Err(e) => self.toast(format!("Kopyalanamadı: {e}")),
         }
     }
 
@@ -958,7 +958,7 @@ impl QrCodeModule {
     }
 
     fn save_png(&mut self, path: &Path) -> Result<(), String> {
-        let img = self.export_image().ok_or("Nothing to save")?;
+        let img = self.export_image().ok_or("Kaydedilecek bir şey yok")?;
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
         }
@@ -984,7 +984,7 @@ impl QrCodeModule {
                 Some(qr) => std::fs::create_dir_all(&dir)
                     .and_then(|()| std::fs::write(&path, svg(&qr, &style, logo.as_deref(), EXPORT)))
                     .map_err(|e| e.to_string()),
-                None => Err("Nothing to save".into()),
+                None => Err("Kaydedilecek bir şey yok".into()),
             }
         } else {
             self.save_png(&path)
@@ -992,9 +992,9 @@ impl QrCodeModule {
         match res {
             Ok(()) => {
                 let _ = shell::reveal(&path);
-                self.toast("Saved to Pictures\\QR codes");
+                self.toast("Resimler\\QR codes klasörüne kaydedildi");
             }
-            Err(e) => self.toast(format!("Could not save: {e}")),
+            Err(e) => self.toast(format!("Kaydedilemedi: {e}")),
         }
     }
 
@@ -1009,7 +1009,7 @@ impl QrCodeModule {
                     tracing::warn!("qr drag: {e}");
                 }
             }
-            Err(e) => self.toast(format!("Could not drag: {e}")),
+            Err(e) => self.toast(format!("Sürüklenemedi: {e}")),
         }
     }
 
@@ -1019,7 +1019,7 @@ impl QrCodeModule {
         let spawned = std::thread::Builder::new()
             .name("zenith-qr-logo".into())
             .spawn(move || {
-                let picked = files::pick_files("Choose a logo (PNG, JPG or BMP)")
+                let picked = files::pick_files("Logo seç (PNG, JPG ya da BMP)")
                     .ok()
                     .and_then(|v| v.into_iter().next());
                 let _ = tx.send(picked);
@@ -1105,7 +1105,7 @@ impl QrCodeModule {
                     ui,
                     card.center(),
                     icons::QR_CODE,
-                    "Paste a link to begin",
+                    "Başlamak için bir bağlantı yapıştır",
                     theme,
                 );
                 return;
@@ -1153,7 +1153,7 @@ impl QrCodeModule {
         let resp = ui
             .interact(img_rect, Id::new("zenith-qr-drag"), Sense::click_and_drag())
             .on_hover_cursor(egui::CursorIcon::Grab)
-            .on_hover_text("Drag into any app  \u{00B7}  Click to copy");
+            .on_hover_text("Herhangi bir uygulamaya sürükle  \u{00B7}  kopyalamak için tıkla");
         if resp.drag_started() {
             self.drag_out();
         } else if resp.clicked() {
@@ -1173,7 +1173,7 @@ impl QrCodeModule {
             ui,
             Rect::from_min_max(field.min, pos2(field.max.x - 36.0, field.max.y)),
             &mut self.text,
-            "Paste a link or type any text",
+            "Bir bağlantı yapıştır ya da metin yaz",
             fid,
             Theme::font(SIZE_BODY),
             theme,
@@ -1186,7 +1186,7 @@ impl QrCodeModule {
             false,
             theme,
         )
-        .on_hover_text("Paste from the clipboard")
+        .on_hover_text("Panodan yapıştır")
         .clicked()
             && let Some(t) = clipboard::read_text()
         {
@@ -1202,7 +1202,7 @@ impl QrCodeModule {
             r
         };
 
-        let r = group(ui, &mut y, "STYLE");
+        let r = group(ui, &mut y, "STİL");
         let labels: Vec<&str> = BODIES.iter().map(|b| b.1).collect();
         let sel = BODIES
             .iter()
@@ -1212,7 +1212,7 @@ impl QrCodeModule {
             self.style.body = BODIES[i].0;
         }
 
-        let r = group(ui, &mut y, "CORNERS");
+        let r = group(ui, &mut y, "KÖŞELER");
         let labels: Vec<&str> = EYES.iter().map(|e| e.1).collect();
         let sel = EYES
             .iter()
@@ -1222,7 +1222,7 @@ impl QrCodeModule {
             self.style.eyes = EYES[i].0;
         }
 
-        let r = group(ui, &mut y, "COLOR");
+        let r = group(ui, &mut y, "RENK");
         let step = w / PALETTES.len() as f32;
         for (i, (name, ..)) in PALETTES.iter().enumerate() {
             let c = pos2(r.min.x + step * (i as f32 + 0.5), r.center().y);
@@ -1245,7 +1245,7 @@ impl QrCodeModule {
             }
         }
 
-        let r = group(ui, &mut y, "BACKGROUND");
+        let r = group(ui, &mut y, "ARKA PLAN");
         let labels: Vec<&str> = BACKGROUNDS.iter().map(|b| b.1).collect();
         let sel = BACKGROUNDS
             .iter()
@@ -1256,7 +1256,7 @@ impl QrCodeModule {
         }
 
         // Logo and label.
-        kit::section(ui, pos2(col.min.x + 2.0, y), "LOGO AND LABEL", theme);
+        kit::section(ui, pos2(col.min.x + 2.0, y), "LOGO VE ETİKET", theme);
         y += 16.0;
         let row = Rect::from_min_size(pos2(col.min.x, y), vec2(w, 32.0));
         let logo_r = Rect::from_min_size(row.min, vec2(118.0, row.height()));
@@ -1298,7 +1298,7 @@ impl QrCodeModule {
                     false,
                     theme,
                 )
-                .on_hover_text("Remove the logo")
+                .on_hover_text("Logoyu kaldır")
                 .clicked()
                 {
                     self.logo = None;
@@ -1309,12 +1309,12 @@ impl QrCodeModule {
                 if kit::button(
                     ui,
                     logo_r,
-                    "Add logo",
+                    "Logo ekle",
                     Some(icons::IMAGE_SQUARE),
                     false,
                     theme,
                 )
-                .on_hover_text("Choose an image, or drop one on the notch")
+                .on_hover_text("Bir resim seç ya da çentiğe bırak")
                 .clicked()
                 {
                     self.pick_logo();
@@ -1327,7 +1327,7 @@ impl QrCodeModule {
             ui.painter().text(
                 label_r.center(),
                 Align2::CENTER_CENTER,
-                "Labels need a background",
+                "Etiket için arka plan gerekir",
                 Theme::font(SIZE_LABEL),
                 theme.text_faint,
             );
@@ -1336,7 +1336,7 @@ impl QrCodeModule {
                 ui,
                 label_r,
                 &mut self.style.label,
-                "Label, e.g. Scan to visit",
+                "Etiket, ör. Ziyaret için okut",
                 Id::new("zenith-qr-label"),
                 Theme::font(SIZE_LABEL + 1.0),
                 theme,
@@ -1348,7 +1348,7 @@ impl QrCodeModule {
         let buttons = Rect::from_min_max(pos2(col.min.x, bottom - 34.0), pos2(col.max.x, bottom));
         let details = match self.code() {
             Some(Ok(qr)) => Some(format!(
-                "Version {}  \u{00B7}  {n}\u{00D7}{n} modules  \u{00B7}  error correction {}",
+                "Sürüm {}  \u{00B7}  {n}\u{00D7}{n} modül  \u{00B7}  hata düzeltme {}",
                 qr.version().value(),
                 match qr.error_correction_level() {
                     QrCodeEcc::Low => "L",
@@ -1386,17 +1386,17 @@ impl QrCodeModule {
                     vec2(bw, buttons.height()),
                 )
             };
-            if kit::button(ui, b(0), "Copy", Some(icons::COPY), true, theme).clicked() {
+            if kit::button(ui, b(0), "Kopyala", Some(icons::COPY), true, theme).clicked() {
                 self.copy();
             }
             if kit::button(ui, b(1), "PNG", Some(icons::DOWNLOAD_SIMPLE), false, theme)
-                .on_hover_text("Save a 1200 px PNG to Pictures\\QR codes")
+                .on_hover_text("Resimler\\QR codes klasörüne 1200 px PNG kaydet")
                 .clicked()
             {
                 self.save(false);
             }
             if kit::button(ui, b(2), "SVG", Some(icons::BEZIER_CURVE), false, theme)
-                .on_hover_text("Save a vector SVG to Pictures\\QR codes")
+                .on_hover_text("Resimler\\QR codes klasörüne vektör SVG kaydet")
                 .clicked()
             {
                 self.save(true);
@@ -1531,7 +1531,7 @@ impl Module for QrCodeModule {
     fn drop_files(&mut self, paths: Vec<PathBuf>) {
         match paths.into_iter().find(|p| is_image(p)) {
             Some(p) => self.set_logo(p),
-            None => self.toast("Drop a PNG, JPG or BMP to use it as the logo"),
+            None => self.toast("Logo olarak kullanmak için bir PNG, JPG ya da BMP bırak"),
         }
     }
 
@@ -1555,7 +1555,7 @@ impl Module for QrCodeModule {
             return;
         }
         if kit::tool_tile(ui, ctx, icons::QR_CODE, false)
-            .on_hover_text("Make a QR code  \u{00B7}  Ctrl+Alt+Q uses the clipboard")
+            .on_hover_text("QR kod oluştur  \u{00B7}  Ctrl+Alt+Q panoyu kullanır")
             .clicked()
         {
             if self.text.trim().is_empty()
@@ -1573,7 +1573,7 @@ impl Module for QrCodeModule {
         self.style.accent = [a.r(), a.g(), a.b()];
         if !self.text.is_empty()
             && widgets::icon_button(header, icons::ARROW_COUNTER_CLOCKWISE, 26.0, false, theme)
-                .on_hover_text("Start over")
+                .on_hover_text("Baştan başla")
                 .clicked()
         {
             self.text.clear();
@@ -1585,7 +1585,7 @@ impl Module for QrCodeModule {
             self.dirty = true;
         }
         if widgets::icon_button(header, icons::FOLDER_OPEN, 26.0, false, theme)
-            .on_hover_text("Open Pictures\\QR codes")
+            .on_hover_text("Resimler\\QR codes klasörünü aç")
             .clicked()
             && let Some(dir) = Self::out_dir()
         {

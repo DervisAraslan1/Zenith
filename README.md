@@ -16,6 +16,8 @@ yok, hesap yok. Ağı yalnızca şunlar için kullanır:
   Lens'e gönderir.
 - **Telefon bağlantısı**: LocalSend protokolüyle yalnızca yerel ağda, ve
   adb/scrcpy ile telefonuna.
+- **Hava durumu**: Open-Meteo'ya (hesap ve anahtar gerektirmez) yalnızca
+  seçtiğin şehrin koordinatları gider; şehir aramada yalnızca yazdığın ad.
 
 Pano, ekran görüntüleri, notlar ve dosyalar bilgisayarında kalır
 (`%APPDATA%\Zenith`).
@@ -75,6 +77,12 @@ sihirbaz görselleri `installer\make_assets.py` ile çizilir.
 - **Düzeni düzenle**: ızgaranın sol altındaki kalem. Kutuları sürükle,
   gizle, boyutlandır (Small, Wide, Large).
 - Tam ekran bir uygulama ya da oyun öndeyken kendini gizler.
+- **Canlı etkinlikler**: müzik çalarken kapalı çentikte kapak, şarkı adı ve
+  gerçek ses seviyesine göre oynayan dalga; ses ve parlaklık değişince
+  çentikte gösterge. Ses tuşlarını Zenith karşılar, böylece Windows'un ses
+  penceresi açılmaz (Ayarlar > Gelişmiş'ten kapatılabilir). Parlaklık
+  tuşları donanımda işlendiği için Windows'un parlaklık penceresi görünmeye
+  devam eder.
 
 ### Araçlar
 

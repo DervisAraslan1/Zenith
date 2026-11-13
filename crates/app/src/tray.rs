@@ -30,12 +30,12 @@ impl Tray {
         startup_on: bool,
         on_top_on: bool,
     ) -> Result<Self> {
-        let settings = MenuItem::with_id("settings", "Settings", true, None);
-        let pin = CheckMenuItem::with_id("pin", "Pin open", true, false, None);
-        let on_top = CheckMenuItem::with_id("ontop", "Always on top", true, on_top_on, None);
+        let settings = MenuItem::with_id("settings", "Ayarlar", true, None);
+        let pin = CheckMenuItem::with_id("pin", "Açık sabitle", true, false, None);
+        let on_top = CheckMenuItem::with_id("ontop", "Her zaman üstte", true, on_top_on, None);
         let startup =
-            CheckMenuItem::with_id("startup", "Launch at startup", true, startup_on, None);
-        let quit = MenuItem::with_id("quit", "Quit Zenith", true, None);
+            CheckMenuItem::with_id("startup", "Açılışta başlat", true, startup_on, None);
+        let quit = MenuItem::with_id("quit", "Zenith'ten çık", true, None);
         let menu = Menu::new();
         menu.append_items(&[
             &settings,

@@ -224,9 +224,9 @@ impl Draw {
 
                 let mut x = bar.min.x + 48.0;
                 let tools = [
-                    (Tool::Pen, icons::PEN, "Pen"),
-                    (Tool::Highlighter, icons::HIGHLIGHTER, "Highlighter"),
-                    (Tool::Eraser, icons::ERASER, "Eraser"),
+                    (Tool::Pen, icons::PEN, "Kalem"),
+                    (Tool::Highlighter, icons::HIGHLIGHTER, "Fosforlu"),
+                    (Tool::Eraser, icons::ERASER, "Silgi"),
                 ];
                 for (tool, glyph, tip) in tools {
                     if button_at(ui, pos2(x, cy), 32.0, glyph, self.tool == tool, theme)
@@ -264,7 +264,7 @@ impl Draw {
                 }
                 x += 6.0;
                 if button_at(ui, pos2(x, cy), 32.0, icons::ARROW_U_UP_LEFT, false, theme)
-                    .on_hover_text("Undo (Ctrl+Z)")
+                    .on_hover_text("Geri al (Ctrl+Z)")
                     .clicked()
                     && let Some(c) = &self.canvas
                 {
@@ -272,7 +272,7 @@ impl Draw {
                 }
                 x += 36.0;
                 if button_at(ui, pos2(x, cy), 32.0, icons::TRASH, false, theme)
-                    .on_hover_text("Clear")
+                    .on_hover_text("Temizle")
                     .clicked()
                     && let Some(c) = &self.canvas
                 {

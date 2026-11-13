@@ -268,7 +268,7 @@ impl PhoneLink {
             }
             _ => {
                 self.queued.extend(paths);
-                self.say("Choose a device to send to");
+                self.say("Gönderilecek cihazı seç");
             }
         }
     }
@@ -297,7 +297,7 @@ impl PhoneLink {
         let spawned = std::thread::Builder::new()
             .name("zenith-phone-pick".into())
             .spawn(move || {
-                let paths = files::pick_files("Send to your phone").unwrap_or_else(|e| {
+                let paths = files::pick_files("Telefonuna gönder").unwrap_or_else(|e| {
                     tracing::warn!("phone link: file picker: {e}");
                     Vec::new()
                 });
@@ -319,7 +319,7 @@ impl PhoneLink {
             .name("zenith-phone-pick".into())
             .spawn(move || {
                 let dir =
-                    zenith_platform::wallpaper::pick_folder("Save received files to", Some(&start))
+                    zenith_platform::wallpaper::pick_folder("Gelen dosyaları kaydet:", Some(&start))
                         .unwrap_or(None);
                 let _ = tx.send(Picked::Folder(dir));
                 if let Some(c) = ctx {
@@ -463,7 +463,7 @@ impl PhoneLink {
                     self.notifs = list;
                 }
                 adb::Event::Message(m) => {
-                    if m.contains("connected to") {
+                    if m.contains("bağlı:") {
                         self.settings.wireless = self.connect_addr.trim().to_owned();
                         self.settings.save();
                     }
@@ -526,7 +526,7 @@ impl PhoneLink {
                 // Mirroring keeps the panel open.
                 self.show = true;
             }
-            Err(e) => self.mirror_error = Some(format!("Could not start scrcpy: {e}")),
+            Err(e) => self.mirror_error = Some(format!("scrcpy başlatılamadı: {e}")),
         }
     }
 
@@ -760,7 +760,7 @@ impl PhoneLink {
             ui.painter().text(
                 rect.center(),
                 Align2::CENTER_CENTER,
-                "Starting mirror…",
+                "Yansıtma başlıyor…",
                 Theme::font(SIZE_LABEL),
                 Color32::from_gray(170),
             );
@@ -776,7 +776,7 @@ impl PhoneLink {
         if resp.clicked() && !controlling {
             m.set_control(true, Some(&ctx));
         }
-        resp.on_hover_text("Click to control your phone with the mouse and keyboard");
+        resp.on_hover_text("Telefonunu fare ve klavyeyle kontrol etmek için tıkla");
     }
 
     fn device_card(&mut self, ui: &mut Ui, area: Rect, theme: &Theme) {
@@ -796,14 +796,14 @@ impl PhoneLink {
             );
             center_text(
                 c.y - 22.0,
-                "Mirroring needs scrcpy",
+                "Yansıtma için scrcpy gerekli",
                 Theme::font_semibold(SIZE_BODY),
                 theme.text,
             );
             lines(
                 ui,
                 pos2(area.min.x + 8.0, c.y - 4.0),
-                "Free and open source. It brings adb along, for notifications and the phone keys too.",
+                "Ücretsiz ve açık kaynak. Bildirimler ve telefon tuşları için gereken adb'yi de getirir.",
                 area.width() - 16.0,
                 4,
                 Theme::font(SIZE_LABEL),
@@ -813,7 +813,7 @@ impl PhoneLink {
             if button(
                 ui,
                 b,
-                "Install scrcpy",
+                "scrcpy'yi kur",
                 Some(icons::DOWNLOAD_SIMPLE),
                 true,
                 theme,
@@ -821,12 +821,12 @@ impl PhoneLink {
             .clicked()
             {
                 match mirror::install_with_winget() {
-                    Ok(()) => self.say("Installing… press Check again when it is done"),
-                    Err(e) => self.say(format!("Could not run winget: {e}")),
+                    Ok(()) => self.say("Kuruluyor… bitince Yeniden dene'ye bas"),
+                    Err(e) => self.say(format!("winget çalıştırılamadı: {e}")),
                 }
             }
             let b2 = Rect::from_center_size(pos2(c.x, c.y + 98.0), vec2(150.0, 28.0));
-            if button(ui, b2, "Check again", None, false, theme).clicked() {
+            if button(ui, b2, "Yeniden dene", None, false, theme).clicked() {
                 self.find_tools();
             }
             return;
@@ -842,14 +842,14 @@ impl PhoneLink {
             );
             center_text(
                 c.y - 10.0,
-                "No phone connected",
+                "Bağlı telefon yok",
                 Theme::font_semibold(SIZE_BODY),
                 theme.text,
             );
             lines(
                 ui,
                 pos2(area.min.x + 10.0, c.y + 10.0),
-                "Plug it in with USB and turn on USB debugging (Developer options), or connect over Wi-Fi in Setup.\n\nFiles work without this: open LocalSend on the phone.",
+                "USB ile bağla ve USB hata ayıklamayı aç (Geliştirici seçenekleri) ya da Kurulum'dan Wi-Fi ile bağlan.\n\nDosya göndermek için buna gerek yok: telefonda LocalSend'i aç.",
                 area.width() - 20.0,
                 9,
                 Theme::font(SIZE_LABEL),
@@ -869,14 +869,14 @@ impl PhoneLink {
                 );
                 center_text(
                     c.y,
-                    "Check your phone",
+                    "Telefonuna bak",
                     Theme::font_semibold(SIZE_BODY),
                     theme.text,
                 );
                 lines(
                     ui,
                     pos2(area.min.x + 10.0, c.y + 20.0),
-                    "Allow USB debugging for this computer on the phone's screen.",
+                    "Telefon ekranında bu bilgisayar için USB hata ayıklamaya izin ver.",
                     area.width() - 20.0,
                     4,
                     Theme::font(SIZE_LABEL),
@@ -887,13 +887,13 @@ impl PhoneLink {
             DeviceState::Offline | DeviceState::Other(_) => {
                 center_text(
                     c.y,
-                    "Phone is offline",
+                    "Telefon çevrimdışı",
                     Theme::font_semibold(SIZE_BODY),
                     theme.text,
                 );
                 center_text(
                     c.y + 20.0,
-                    "Reconnect the cable or Wi-Fi",
+                    "Kabloyu ya da Wi-Fi'yi yeniden bağla",
                     Theme::font(SIZE_LABEL),
                     theme.text_dim,
                 );
@@ -960,14 +960,14 @@ impl PhoneLink {
         );
         let b = Rect::from_center_size(pos2(c.x, frame.max.y + 78.0), vec2(160.0, 32.0));
         if self.scrcpy.is_some() {
-            if button(ui, b, "Mirror screen", Some(icons::SCREENCAST), true, theme).clicked() {
+            if button(ui, b, "Ekranı yansıt", Some(icons::SCREENCAST), true, theme).clicked() {
                 let ctx = ui.ctx().clone();
                 self.start_mirror(&ctx, area);
             }
         } else if button(
             ui,
             b,
-            "Get scrcpy to mirror",
+            "Yansıtmak için scrcpy'yi kur",
             Some(icons::DOWNLOAD_SIMPLE),
             false,
             theme,
@@ -975,8 +975,8 @@ impl PhoneLink {
         .clicked()
         {
             match mirror::install_with_winget() {
-                Ok(()) => self.say("Installing… press Check again in Setup when it is done"),
-                Err(e) => self.say(format!("Could not run winget: {e}")),
+                Ok(()) => self.say("Kuruluyor… bitince Kurulum'da Yeniden dene'ye bas"),
+                Err(e) => self.say(format!("winget çalıştırılamadı: {e}")),
             }
         }
         if let Some(err) = &self.mirror_error {
@@ -1000,12 +1000,12 @@ impl PhoneLink {
         let mirroring = self.mirror.as_ref().is_some_and(Mirror::ready);
         let controlling = self.mirror.as_ref().is_some_and(Mirror::controlling);
         let keys: [(&'static str, &'static str, u32); 6] = [
-            (icons::CARET_LEFT, "Back", KEY_BACK),
-            (icons::CIRCLE, "Home", KEY_HOME),
-            (icons::SQUARE, "Recent apps", KEY_RECENTS),
-            (icons::SPEAKER_LOW, "Volume down", KEY_VOL_DOWN),
-            (icons::SPEAKER_HIGH, "Volume up", KEY_VOL_UP),
-            (icons::POWER, "Screen on / off", KEY_POWER),
+            (icons::CARET_LEFT, "Geri", KEY_BACK),
+            (icons::CIRCLE, "Ana ekran", KEY_HOME),
+            (icons::SQUARE, "Son uygulamalar", KEY_RECENTS),
+            (icons::SPEAKER_LOW, "Sesi kıs", KEY_VOL_DOWN),
+            (icons::SPEAKER_HIGH, "Sesi aç", KEY_VOL_UP),
+            (icons::POWER, "Ekranı aç / kapat", KEY_POWER),
         ];
         let n = keys.len() + if mirroring { 2 } else { 0 };
         let step = row.width() / n as f32;
@@ -1023,9 +1023,9 @@ impl PhoneLink {
         if mirroring {
             let cx = row.min.x + step * (keys.len() as f32 + 0.5);
             let tip = if controlling {
-                "Controlling: press Esc to give the mouse and keyboard back"
+                "Kontrol ediliyor: fare ve klavyeyi geri almak için Esc"
             } else {
-                "Control with mouse and keyboard (Esc to stop)"
+                "Fare ve klavyeyle kontrol et (durdurmak için Esc)"
             };
             if icon_at(
                 ui,
@@ -1043,7 +1043,7 @@ impl PhoneLink {
             }
             let cx = row.min.x + step * (keys.len() as f32 + 1.5);
             if icon_at(ui, pos2(cx, cy), size, icons::STOP, false, theme)
-                .on_hover_text("Stop mirroring")
+                .on_hover_text("Yansıtmayı durdur")
                 .clicked()
             {
                 self.mirror = None;
@@ -1108,10 +1108,10 @@ impl PhoneLink {
             );
             let accept = Rect::from_min_size(pos2(card.max.x - 172.0, y + 23.0), vec2(80.0, 30.0));
             let decline = Rect::from_min_size(pos2(card.max.x - 86.0, y + 23.0), vec2(74.0, 30.0));
-            if button(ui, accept, "Accept", Some(icons::CHECK), true, theme).clicked() {
+            if button(ui, accept, "Kabul et", Some(icons::CHECK), true, theme).clicked() {
                 let inc = self.incoming.remove(0);
                 let _ = inc.reply.send(true);
-            } else if button(ui, decline, "Decline", None, false, theme).clicked() {
+            } else if button(ui, decline, "Reddet", None, false, theme).clicked() {
                 let inc = self.incoming.remove(0);
                 let _ = inc.reply.send(false);
             }
@@ -1137,7 +1137,7 @@ impl PhoneLink {
                     .desired_width(field.width()),
             );
             let send = Rect::from_min_size(pos2(card.max.x - 120.0, y + 11.0), vec2(108.0, 30.0));
-            if button(ui, send, "Send", Some(icons::PAPER_PLANE_TILT), true, theme).clicked()
+            if button(ui, send, "Gönder", Some(icons::PAPER_PLANE_TILT), true, theme).clicked()
                 && let Some((peer, paths, pin)) = self.pin.take()
                 && let Some(ls) = &self.ls
             {
@@ -1172,7 +1172,7 @@ impl PhoneLink {
             false,
             theme,
         )
-        .on_hover_text("Look for devices again (also scans the whole network)");
+        .on_hover_text("Cihazları yeniden ara (tüm ağı da tarar)");
         if refresh.clicked() {
             self.rescan();
         }
@@ -1180,7 +1180,7 @@ impl PhoneLink {
             ui.painter().text(
                 pos2(x, cy),
                 Align2::LEFT_CENTER,
-                "Looking for devices with LocalSend open…",
+                "LocalSend'i açık cihazlar aranıyor…",
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_dim,
             );
@@ -1291,9 +1291,9 @@ impl PhoneLink {
             hovering,
         );
         let title = match (&target, hovering) {
-            (Some(t), true) => format!("Drop to send to {t}"),
-            (Some(t), false) => format!("Drop files here to send to {t}"),
-            (None, _) => "Drop files here".to_owned(),
+            (Some(t), true) => format!("{t} cihazına göndermek için bırak"),
+            (Some(t), false) => format!("{t} cihazına göndermek için dosyaları buraya bırak"),
+            (None, _) => "Dosyaları buraya bırak".to_owned(),
         };
         let text_w = zone.width() - 60.0 - 230.0;
         one_line(
@@ -1305,9 +1305,9 @@ impl PhoneLink {
             theme.text,
         );
         let sub = if target.is_some() {
-            "Folders keep their structure. Phones need the LocalSend app open."
+            "Klasörler yapısını korur. Telefonda LocalSend uygulaması açık olmalı."
         } else {
-            "Open LocalSend on your phone, then pick it above."
+            "Telefonunda LocalSend'i aç, sonra yukarıdan seç."
         };
         lines(
             ui,
@@ -1322,7 +1322,7 @@ impl PhoneLink {
             pos2(zone.max.x - 228.0, zone.center().y - 15.0),
             vec2(104.0, 30.0),
         );
-        if button(ui, choose, "Choose files", Some(icons::FILES), true, theme).clicked() {
+        if button(ui, choose, "Dosya seç", Some(icons::FILES), true, theme).clicked() {
             self.pick_files();
         }
         let clip = Rect::from_min_size(
@@ -1332,21 +1332,21 @@ impl PhoneLink {
         if button(
             ui,
             clip,
-            "Send clipboard",
+            "Panoyu gönder",
             Some(icons::CLIPBOARD_TEXT),
             false,
             theme,
         )
-        .on_hover_text("Send the text on your clipboard as a message")
+        .on_hover_text("Panodaki metni mesaj olarak gönder")
         .clicked()
         {
             match (clipboard::read_text(), self.target().cloned(), &self.ls) {
                 (Some(text), Some(peer), Some(ls)) if !text.trim().is_empty() => {
                     ls.send_text(peer, text);
-                    self.say("Clipboard sent");
+                    self.say("Pano gönderildi");
                 }
-                (_, None, _) => self.say("Choose a device to send to"),
-                _ => self.say("The clipboard has no text"),
+                (_, None, _) => self.say("Gönderilecek cihazı seç"),
+                _ => self.say("Panoda metin yok"),
             }
         }
     }
@@ -1356,7 +1356,7 @@ impl PhoneLink {
             ui.painter().text(
                 pos2(list.center().x, list.min.y + 40.0),
                 Align2::CENTER_CENTER,
-                "Transfers and messages show up here.",
+                "Aktarımlar ve mesajlar burada görünür.",
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_faint,
             );
@@ -1396,7 +1396,7 @@ impl PhoneLink {
                     one_line(
                         ui,
                         pos2(card.min.x + 36.0, card.min.y + 9.0),
-                        &format!("Message from {}", m.from),
+                        &format!("{} cihazından mesaj", m.from),
                         card.width() - 120.0,
                         Theme::font_semibold(SIZE_LABEL),
                         theme.text_dim,
@@ -1418,7 +1418,7 @@ impl PhoneLink {
                         false,
                         theme,
                     )
-                    .on_hover_text("Copy")
+                    .on_hover_text("Kopyala")
                     .clicked()
                     {
                         copy = Some(m.text.clone());
@@ -1431,7 +1431,7 @@ impl PhoneLink {
                         false,
                         theme,
                     )
-                    .on_hover_text("Dismiss")
+                    .on_hover_text("Kapat")
                     .clicked()
                     {
                         dismiss_msg = Some(i);
@@ -1451,8 +1451,8 @@ impl PhoneLink {
             });
         if let Some(text) = copy {
             match clipboard::copy_text(&text) {
-                Ok(()) => self.say("Copied"),
-                Err(e) => self.say(format!("Could not copy: {e}")),
+                Ok(()) => self.say("Kopyalandı"),
+                Err(e) => self.say(format!("Kopyalanamadı: {e}")),
             }
         }
         if let Some(i) = dismiss_msg {
@@ -1482,7 +1482,7 @@ impl PhoneLink {
             ui.painter().text(
                 c + vec2(0.0, 10.0),
                 Align2::CENTER_CENTER,
-                "Connect your phone over USB or Wi-Fi to see its notifications.",
+                "Bildirimleri görmek için telefonunu USB ya da Wi-Fi ile bağla.",
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_dim,
             );
@@ -1502,9 +1502,9 @@ impl PhoneLink {
                 c + vec2(0.0, 10.0),
                 Align2::CENTER_CENTER,
                 if self.notifs_loaded {
-                    "No notifications. All caught up."
+                    "Bildirim yok. Hepsi okundu."
                 } else {
-                    "Reading notifications…"
+                    "Bildirimler okunuyor…"
                 },
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_dim,
@@ -1580,7 +1580,7 @@ impl PhoneLink {
                         theme.text_dim,
                     );
                     if resp
-                        .on_hover_text("Open on the phone and mirror it")
+                        .on_hover_text("Telefonda aç ve yansıt")
                         .clicked()
                     {
                         open = Some(n.package.clone());
@@ -1614,16 +1614,16 @@ impl PhoneLink {
                     ui.label(egui::RichText::new(text).font(Theme::font(SIZE_LABEL)).color(theme.text_dim));
                 };
 
-                heading(ui, "RECEIVING FILES");
+                heading(ui, "DOSYA ALMA");
                 match &self.ls {
                     Some(ls) => match &ls.server_error {
-                        None => dim(ui, &format!("Visible as \"{}\" on port {}. Allow Zenith through the Windows firewall if asked.", ls.alias(), ls.port())),
-                        Some(e) => dim(ui, &format!("Receiving is off: {e}")),
+                        None => dim(ui, &format!("\"{}\" adıyla {} portunda görünür. Sorulursa Windows güvenlik duvarında Zenith'e izin ver.", ls.alias(), ls.port())),
+                        Some(e) => dim(ui, &format!("Dosya alma kapalı: {e}")),
                     },
-                    None => dim(ui, "Starting…"),
+                    None => dim(ui, "Başlıyor…"),
                 }
                 let mut auto = self.settings.auto_accept;
-                if setting_row(ui, "Accept incoming files without asking", &mut auto, theme) {
+                if setting_row(ui, "Gelen dosyaları sormadan kabul et", &mut auto, theme) {
                     self.settings.auto_accept = auto;
                     self.settings.save();
                     if let Some(ls) = &self.ls {
@@ -1632,13 +1632,13 @@ impl PhoneLink {
                 }
                 ui.horizontal(|ui| {
                     let path = self.settings.save_dir.display().to_string();
-                    ui.label(egui::RichText::new(format!("Save to  {path}")).font(Theme::font(SIZE_LABEL)).color(theme.text));
+                    ui.label(egui::RichText::new(format!("Kayıt yeri  {path}")).font(Theme::font(SIZE_LABEL)).color(theme.text));
                 });
                 ui.horizontal(|ui| {
-                    if ui.button("Change folder").clicked() {
+                    if ui.button("Klasörü değiştir").clicked() {
                         self.pick_folder();
                     }
-                    if ui.button("Open folder").clicked() {
+                    if ui.button("Klasörü aç").clicked() {
                         let _ = std::fs::create_dir_all(&self.settings.save_dir);
                         if let Err(e) = shell::open(&self.settings.save_dir.to_string_lossy()) {
                             tracing::warn!("phone link: open folder: {e}");
@@ -1647,71 +1647,71 @@ impl PhoneLink {
                 });
 
                 ui.add_space(4.0);
-                heading(ui, "MIRRORING");
+                heading(ui, "YANSITMA");
                 match &self.scrcpy {
                     Some(p) => dim(ui, &format!("scrcpy: {}", p.display())),
                     None => {
-                        dim(ui, "scrcpy is not installed. It is free and open source, and brings adb along.");
+                        dim(ui, "scrcpy kurulu değil. Ücretsiz ve açık kaynaktır, adb'yi de getirir.");
                         ui.horizontal(|ui| {
-                            if ui.button("Install with WinGet").clicked() {
+                            if ui.button("WinGet ile kur").clicked() {
                                 match mirror::install_with_winget() {
-                                    Ok(()) => self.say("Installing… press Check again when it is done"),
-                                    Err(e) => self.say(format!("Could not run winget: {e}")),
+                                    Ok(()) => self.say("Kuruluyor… bitince Yeniden dene'ye bas"),
+                                    Err(e) => self.say(format!("winget çalıştırılamadı: {e}")),
                                 }
                             }
-                            if ui.button("Check again").clicked() {
+                            if ui.button("Yeniden dene").clicked() {
                                 self.find_tools();
                             }
                         });
                     }
                 }
                 let mut audio = self.settings.audio;
-                if setting_row(ui, "Play the phone's sound on this PC (Android 11+)", &mut audio, theme) {
+                if setting_row(ui, "Telefonun sesini bu bilgisayarda çal (Android 11+)", &mut audio, theme) {
                     self.settings.audio = audio;
                     self.settings.save();
                 }
                 let mut off = self.settings.screen_off;
-                if setting_row(ui, "Turn the phone's screen off while mirroring", &mut off, theme) {
+                if setting_row(ui, "Yansıtırken telefonun ekranını kapat", &mut off, theme) {
                     self.settings.screen_off = off;
                     self.settings.save();
                 }
-                dim(ui, "Clipboard syncs both ways while mirroring. Changes apply the next time mirroring starts.");
+                dim(ui, "Yansıtırken pano iki yönlü eşitlenir. Değişiklikler bir sonraki yansıtmada uygulanır.");
 
                 ui.add_space(4.0);
-                heading(ui, "WI-FI CONNECTION (ADB)");
+                heading(ui, "WI-FI BAĞLANTISI (ADB)");
                 if self.adb_missing {
-                    dim(ui, "adb is not available. Install scrcpy (above), which includes it.");
+                    dim(ui, "adb yok. İçinde adb olan scrcpy'yi (yukarıda) kur.");
                 }
                 ui.horizontal(|ui| {
                     ui.add(egui::TextEdit::singleline(&mut self.connect_addr).hint_text("192.168.1.20:5555").desired_width(170.0));
-                    ui.add(egui::TextEdit::singleline(&mut self.pair_code).hint_text("Pairing code").desired_width(100.0));
+                    ui.add(egui::TextEdit::singleline(&mut self.pair_code).hint_text("Eşleştirme kodu").desired_width(100.0));
                     let addr = self.connect_addr.trim().to_owned();
-                    if ui.add_enabled(!addr.is_empty(), egui::Button::new("Connect")).clicked() {
+                    if ui.add_enabled(!addr.is_empty(), egui::Button::new("Bağlan")).clicked() {
                         self.adb_send(adb::Cmd::Connect(addr.clone()));
                     }
                     let code = self.pair_code.trim().to_owned();
-                    if ui.add_enabled(!addr.is_empty() && !code.is_empty(), egui::Button::new("Pair")).clicked() {
+                    if ui.add_enabled(!addr.is_empty() && !code.is_empty(), egui::Button::new("Eşleştir")).clicked() {
                         self.adb_send(adb::Cmd::Pair(addr, code));
                     }
                 });
-                dim(ui, "Android 11+: Developer options > Wireless debugging. Pair with the code's address, then connect to the address on the main screen.");
+                dim(ui, "Android 11+: Geliştirici seçenekleri > Kablosuz hata ayıklama. Kodun adresiyle eşleştir, sonra ana ekrandaki adrese bağlan.");
                 let usb = self.device().is_some_and(|d| d.state == DeviceState::Ready && !d.wireless());
                 if ui
-                    .add_enabled(usb, egui::Button::new("Switch the USB phone to Wi-Fi"))
-                    .on_hover_text("Runs adb tcpip 5555 and connects over Wi-Fi; then unplug the cable")
+                    .add_enabled(usb, egui::Button::new("USB'deki telefonu Wi-Fi'ye geçir"))
+                    .on_hover_text("adb tcpip 5555 çalıştırır ve Wi-Fi ile bağlanır; sonra kabloyu çıkar")
                     .clicked()
                 {
                     self.adb_send(adb::Cmd::GoWireless);
-                    self.say("Switching to Wi-Fi…");
+                    self.say("Wi-Fi'ye geçiliyor…");
                 }
                 if let Some(d) = self.device().filter(|d| d.wireless()).cloned()
-                    && ui.button(format!("Disconnect {}", d.serial)).clicked()
+                    && ui.button(format!("Bağlantıyı kes: {}", d.serial)).clicked()
                 {
                     self.adb_send(adb::Cmd::Disconnect(d.serial));
                 }
                 if self.devices.len() > 1 {
                     ui.add_space(4.0);
-                    heading(ui, "PHONES");
+                    heading(ui, "TELEFONLAR");
                     let mut pick = None;
                     for d in &self.devices {
                         let label = format!(
@@ -1802,9 +1802,9 @@ fn transfer_row(ui: &mut Ui, card: Rect, t: &Arc<Transfer>, theme: &Theme) -> Op
         theme.text,
     );
     let who = if sending {
-        format!("to {}", t.peer)
+        format!("{} cihazına", t.peer)
     } else {
-        format!("from {}", t.peer)
+        format!("{} cihazından", t.peer)
     };
     let done = t.done.load(std::sync::atomic::Ordering::Relaxed);
     let status = match &state {
@@ -1846,7 +1846,7 @@ fn transfer_row(ui: &mut Ui, card: Rect, t: &Arc<Transfer>, theme: &Theme) -> Op
     let action = pos2(card.max.x - 22.0, card.center().y);
     if !state.finished() {
         if icon_at(ui, action, 26.0, icons::X, false, theme)
-            .on_hover_text("Cancel")
+            .on_hover_text("İptal")
             .clicked()
         {
             t.cancel();
@@ -1855,7 +1855,7 @@ fn transfer_row(ui: &mut Ui, card: Rect, t: &Arc<Transfer>, theme: &Theme) -> Op
         let first = t.saved.lock().ok().and_then(|s| s.first().cloned());
         if let Some(p) = first
             && icon_at(ui, action, 26.0, icons::FOLDER_OPEN, false, theme)
-                .on_hover_text("Show in Explorer")
+                .on_hover_text("Gezgin'de göster")
                 .clicked()
         {
             return Some(p);
@@ -2111,7 +2111,7 @@ impl Module for PhoneLink {
                 i.name(),
                 i.battery.map(|b| format!(" · {b}%")).unwrap_or_default()
             ),
-            _ => "Send files, mirror your phone, see its notifications".to_owned(),
+            _ => "Dosya gönder, telefonunu yansıt, bildirimlerini gör".to_owned(),
         };
         resp.on_hover_text(tip);
     }
@@ -2122,18 +2122,18 @@ impl Module for PhoneLink {
 
         // Header: tabs (right to left).
         let alerts = if self.unseen > 0 {
-            format!("Alerts ({})", self.unseen)
+            format!("Bildirimler ({})", self.unseen)
         } else if !self.notifs.is_empty() {
-            format!("Alerts · {}", self.notifs.len())
+            format!("Bildirimler · {}", self.notifs.len())
         } else {
-            "Alerts".to_owned()
+            "Bildirimler".to_owned()
         };
         let mut idx = match self.tab {
             Tab::Files => 0,
             Tab::Alerts => 1,
             Tab::Setup => 2,
         };
-        if widgets::segmented(header, &["Files", &alerts, "Setup"], &mut idx, theme).changed() {
+        if widgets::segmented(header, &["Dosyalar", &alerts, "Kurulum"], &mut idx, theme).changed() {
             self.tab = [Tab::Files, Tab::Alerts, Tab::Setup][idx];
         }
 

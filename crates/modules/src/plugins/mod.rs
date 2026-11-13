@@ -461,11 +461,11 @@ impl Plugin {
 
     fn error_text(&self) -> String {
         let mut s = match &self.status {
-            Status::Stopped(why) => format!("Stopped: {why}"),
+            Status::Stopped(why) => format!("Durdu: {why}"),
             Status::Running => String::new(),
         };
         if let Some(bad) = &self.last_bad {
-            s.push_str(&format!("\nLast bad message: {bad}"));
+            s.push_str(&format!("\nSon hatalı mesaj: {bad}"));
         }
         let tail = self.stderr.text();
         if !tail.is_empty() {
@@ -660,7 +660,7 @@ impl Module for Plugin {
                     ui,
                     self.icon,
                     self.name(),
-                    "Stopped · click to restart",
+                    "Durdu · yeniden başlatmak için tıkla",
                     theme,
                     ctx.hovered,
                 );
@@ -744,7 +744,7 @@ impl Module for Plugin {
             if crate::kit::button(
                 &mut child,
                 r,
-                "Restart",
+                "Yeniden başlat",
                 Some(icons::glyph("arrow-clockwise")),
                 true,
                 theme,

@@ -254,8 +254,8 @@ impl QuickLaunch {
         let name = item.name.clone();
         self.toast = Some((
             match res {
-                Ok(()) => format!("Opening {name}"),
-                Err(e) => format!("Could not open {name}: {e}"),
+                Ok(()) => format!("{name} açılıyor"),
+                Err(e) => format!("{name} açılamadı: {e}"),
             },
             Instant::now(),
         ));
@@ -299,7 +299,7 @@ impl QuickLaunch {
         let spawned = std::thread::Builder::new()
             .name("zenith-launch-pick".into())
             .spawn(move || {
-                let picked = files::pick_files("Add to Quick launch").unwrap_or_default();
+                let picked = files::pick_files("Hızlı başlata ekle").unwrap_or_default();
                 let _ = tx.send(picked);
                 if let Some(c) = ctx {
                     c.request_repaint();
@@ -407,7 +407,7 @@ impl QuickLaunch {
                     c.y,
                     egui::Stroke::new(2.0, Color32::WHITE),
                 );
-                if bresp.on_hover_text("Remove").clicked() {
+                if bresp.on_hover_text("Kaldır").clicked() {
                     remove = Some(i);
                 }
             } else if resp.clicked() {
@@ -456,19 +456,19 @@ impl QuickLaunch {
             ui,
             field,
             &mut self.draft,
-            "Paste a path, a website or ms-settings: link",
+            "Bir yol, web sitesi ya da ms-settings: bağlantısı yapıştır",
             id,
             Theme::font(SIZE_BODY),
             theme,
         );
         let enter = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-        if kit::button(ui, browse, "Browse", Some(icons::FOLDER_OPEN), false, theme).clicked() {
+        if kit::button(ui, browse, "Gözat", Some(icons::FOLDER_OPEN), false, theme).clicked() {
             self.browse();
         }
         let ready = !self.draft.trim().is_empty();
         let clicked = ui
             .add_enabled_ui(ready, |ui| {
-                kit::button(ui, add, "Add", Some(icons::PLUS), true, theme).clicked()
+                kit::button(ui, add, "Ekle", Some(icons::PLUS), true, theme).clicked()
             })
             .inner;
         if (enter || clicked) && ready {
@@ -644,7 +644,7 @@ impl Module for QuickLaunch {
             return;
         }
         if kit::tool_tile(ui, ctx, icons::ROCKET_LAUNCH, false)
-            .on_hover_text("Your apps, folders and sites, one click away")
+            .on_hover_text("Uygulamaların, klasörlerin ve sitelerin bir tık uzağında")
             .clicked()
         {
             self.open_page = true;
@@ -661,9 +661,9 @@ impl Module for QuickLaunch {
         };
         if widgets::icon_button(header, glyph, 26.0, self.editing, theme)
             .on_hover_text(if self.editing {
-                "Done"
+                "Bitti"
             } else {
-                "Reorder or remove"
+                "Sırala ya da kaldır"
             })
             .clicked()
         {
@@ -672,7 +672,7 @@ impl Module for QuickLaunch {
         }
         if self.items.len() > 1
             && widgets::icon_button(header, icons::ARROW_COUNTER_CLOCKWISE, 26.0, false, theme)
-                .on_hover_text("Reset to the starter set")
+                .on_hover_text("Başlangıç setine dön")
                 .clicked()
         {
             self.items = defaults();
@@ -686,7 +686,7 @@ impl Module for QuickLaunch {
                 ui,
                 grid.center(),
                 icons::ROCKET_LAUNCH,
-                "Drop apps, files or folders here",
+                "Uygulama, dosya ya da klasörleri buraya bırak",
                 theme,
             );
         } else {
@@ -696,11 +696,11 @@ impl Module for QuickLaunch {
         let (hint, color) = match &self.toast {
             Some((t, at)) if at.elapsed().as_secs_f32() < 3.0 => (t.clone(), theme.accent_fg()),
             _ if self.editing => (
-                "Drag to reorder  \u{00B7}  the red badge removes".to_owned(),
+                "Sıralamak için sürükle  \u{00B7}  kırmızı rozet kaldırır".to_owned(),
                 theme.text_faint,
             ),
             _ => (
-                "Drop files or folders on the notch to add them".to_owned(),
+                "Eklemek için dosya ya da klasörleri çentiğe bırak".to_owned(),
                 theme.text_faint,
             ),
         };

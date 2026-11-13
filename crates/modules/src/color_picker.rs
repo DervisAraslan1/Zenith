@@ -20,10 +20,10 @@ use std::time::Duration;
 use crate::snipper::Snipper;
 
 const HINT: &str =
-    "Click to copy  \u{00B7}  Scroll to zoom  \u{00B7}  Arrows to nudge  \u{00B7}  Esc to cancel";
+    "Kopyalamak için tıkla  \u{00B7}  yakınlaştırmak için kaydır  \u{00B7}  oklarla kaydır  \u{00B7}  iptal için Esc";
 /// Colors kept.
 const MAX_HISTORY: usize = 12;
-/// How long the "Copied" confirmation shows on the page.
+/// How long the "Kopyalandı" confirmation shows on the page.
 const COPIED_FOR: f64 = 1.2;
 /// History page grid.
 const COLS: usize = 4;
@@ -253,7 +253,7 @@ impl Module for ColorPicker {
         let resp = self
             .snipper
             .tile(ui, ctx, icons::EYEDROPPER, "color-tile")
-            .on_hover_text("Click to pick  \u{00B7}  Right click for history");
+            .on_hover_text("Renk seçmek için tıkla  \u{00B7}  geçmiş için sağ tıkla");
         if resp.clicked() {
             self.start();
         }
@@ -275,13 +275,13 @@ impl Module for ColorPicker {
         }
         if !self.history.is_empty()
             && widgets::icon_button(header, icons::TRASH, 26.0, false, theme)
-                .on_hover_text("Clear history")
+                .on_hover_text("Geçmişi temizle")
                 .clicked()
         {
             self.history.clear();
         }
         if widgets::icon_button(header, icons::EYEDROPPER, 26.0, false, theme)
-            .on_hover_text("Pick a color (Ctrl+Alt+P)")
+            .on_hover_text("Renk seç (Ctrl+Alt+P)")
             .clicked()
         {
             self.start();
@@ -291,7 +291,7 @@ impl Module for ColorPicker {
             .position(|&f| f == self.format)
             .unwrap_or(0);
         if widgets::segmented(header, &Format::LABELS, &mut selected, theme)
-            .on_hover_text("Format to copy")
+            .on_hover_text("Kopyalama biçimi")
             .changed()
         {
             self.format = Format::ALL[selected];
@@ -301,7 +301,7 @@ impl Module for ColorPicker {
             ui.painter().text(
                 body.center(),
                 Align2::CENTER_CENTER,
-                "No colors yet. Pick one from anywhere on screen.",
+                "Henüz renk yok. Ekranın herhangi bir yerinden seç.",
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_dim,
             );
@@ -383,7 +383,7 @@ impl ColorPicker {
                 ui.painter().text(
                     pos2(inner.min.x + 18.0, label_y),
                     Align2::LEFT_CENTER,
-                    "Copied",
+                    "Kopyalandı",
                     Theme::font(SIZE_LABEL),
                     theme.accent_fg(),
                 );

@@ -27,9 +27,9 @@ use zenith_ui::{anim, icons, paint, widgets};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-const HINT: &str = "Drag a region  \u{00B7}  Click a window  \u{00B7}  F screen  \u{00B7}  A all screens  \u{00B7}  Esc to cancel";
+const HINT: &str = "Bir alan seç  \u{00B7}  pencereye tıkla  \u{00B7}  F ekran  \u{00B7}  A tüm ekranlar  \u{00B7}  iptal için Esc";
 const DELAYS: [u64; 4] = [0, 3, 5, 10];
-const DELAY_LABELS: [&str; 4] = ["Off", "3 s", "5 s", "10 s"];
+const DELAY_LABELS: [&str; 4] = ["Kapalı", "3 s", "5 s", "10 s"];
 /// Captures kept for the page.
 const RECENT: usize = 4;
 /// Thumbnail edge, pixels.
@@ -45,7 +45,7 @@ pub enum After {
 
 impl After {
     const ALL: [After; 3] = [After::Edit, After::Copy, After::Save];
-    const LABELS: [&str; 3] = ["Edit", "Copy", "Save"];
+    const LABELS: [&str; 3] = ["Düzenle", "Kopyala", "Kaydet"];
 }
 
 struct Recent {
@@ -243,13 +243,13 @@ impl Module for Screenshot {
                 Theme::font_semibold(SIZE_BIG - 6.0),
                 theme.accent_fg(),
             );
-            resp.on_hover_text("Click to cancel");
+            resp.on_hover_text("İptal için tıkla");
             return;
         }
         let resp = self
             .snipper
             .tile(ui, ctx, icons::SELECTION, "shot-tile")
-            .on_hover_text("Click to capture  \u{00B7}  Right click for options");
+            .on_hover_text("Çekmek için tıkla  \u{00B7}  seçenekler için sağ tıkla");
         if resp.clicked() {
             self.start();
         }
@@ -266,7 +266,7 @@ impl Module for Screenshot {
 
     fn ui_page(&mut self, ui: &mut Ui, header: &mut Ui, body: Rect, theme: &Theme) -> bool {
         if widgets::icon_button(header, icons::FOLDER_OPEN, 26.0, false, theme)
-            .on_hover_text("Open the Screenshots folder")
+            .on_hover_text("Ekran görüntüleri klasörünü aç")
             .clicked()
             && let Some(dir) = shell::screenshots_dir()
         {
@@ -276,7 +276,7 @@ impl Module for Screenshot {
             }
         }
         if widgets::icon_button(header, icons::SELECTION, 26.0, false, theme)
-            .on_hover_text("Capture (Ctrl+Alt+S)")
+            .on_hover_text("Çek (Ctrl+Alt+S)")
             .clicked()
         {
             self.start();
@@ -294,11 +294,11 @@ impl Module for Screenshot {
         let row =
             |y: f32| Rect::from_min_size(pos2(body.min.x + 110.0, y - 12.0), vec2(300.0, 24.0));
         let y0 = body.min.y + 14.0;
-        label(ui, y0, "Delay");
+        label(ui, y0, "Gecikme");
         let mut rui = ui.new_child(egui::UiBuilder::new().max_rect(row(y0)));
         widgets::segmented(&mut rui, &DELAY_LABELS, &mut self.delay, theme);
         let y1 = y0 + 34.0;
-        label(ui, y1, "After capture");
+        label(ui, y1, "Çektikten sonra");
         let mut after = After::ALL
             .iter()
             .position(|a| *a == self.after)
@@ -311,9 +311,9 @@ impl Module for Screenshot {
             pos2(body.max.x, y1),
             Align2::RIGHT_CENTER,
             match self.after {
-                After::Edit => "Mark up, then copy or save",
-                After::Copy => "Straight to the clipboard",
-                After::Save => "PNG in Screenshots, and copied",
+                After::Edit => "İşaretle, sonra kopyala ya da kaydet",
+                After::Copy => "Doğrudan panoya",
+                After::Save => "Ekran görüntülerine PNG, ayrıca kopyalanır",
             },
             Theme::font(SIZE_LABEL),
             theme.text_faint,
@@ -326,7 +326,7 @@ impl Module for Screenshot {
             ui.painter().text(
                 area.center(),
                 Align2::CENTER_CENTER,
-                "Captures show up here.",
+                "Çekimler burada görünür.",
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_faint,
             );
@@ -377,7 +377,7 @@ impl Module for Screenshot {
                     false,
                 );
             }
-            if resp.on_hover_text("Open in the editor").clicked() {
+            if resp.on_hover_text("Düzenleyicide aç").clicked() {
                 open = Some(r.frame.clone());
             }
         }

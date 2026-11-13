@@ -86,6 +86,7 @@ fn title(path: &Path) -> String {
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
     let parse = || {
+        // The file name stays "Memo ..." on disk; only the title is Turkish.
         let rest = stem.strip_prefix("Memo ")?;
         let (date, time) = rest.split_once(' ')?;
         let mut d = date.split('-');
@@ -97,7 +98,7 @@ fn title(path: &Path) -> String {
         let mut t = time.split('-');
         let (h, min) = (t.next()?, t.next()?);
         const MONTHS: [&str; 12] = [
-            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+            "Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara",
         ];
         Some(format!(
             "{day} {}, {h}:{min}",
@@ -169,7 +170,7 @@ fn start_recording(dir: PathBuf) -> Recording {
                     .and(failed.map_or(Ok(()), Err))
                     .and(finished)
                     .and(if too_short {
-                        Err("Too short to keep".to_owned())
+                        Err("Saklamak için çok kısa".to_owned())
                     } else {
                         Ok(())
                     });
@@ -320,7 +321,7 @@ impl VoiceMemo {
             return;
         }
         if target.exists() {
-            self.toast("A memo with that name exists");
+            self.toast("Bu adda bir kayıt var");
             return;
         }
         if self.playing.as_ref().is_some_and(|(p, ..)| p == from) {
@@ -332,7 +333,7 @@ impl VoiceMemo {
                     m.path = target;
                 }
             }
-            Err(e) => self.toast(format!("Could not rename: {e}")),
+            Err(e) => self.toast(format!("Yeniden adlandırılamadı: {e}")),
         }
     }
 
@@ -360,9 +361,9 @@ impl VoiceMemo {
             },
         );
         let status = if recording {
-            "Recording".to_owned()
+            "Kaydediliyor".to_owned()
         } else {
-            "Ready".to_owned()
+            "Hazır".to_owned()
         };
         let pulse = if recording {
             0.5 + 0.5 * (ui.input(|i| i.time) as f32 * 4.0).sin()
@@ -455,9 +456,9 @@ impl VoiceMemo {
             mix(RED, Color32::WHITE, 0.08 * hover),
         );
         let hint = if recording {
-            "Click to stop and save"
+            "Durdurup kaydetmek için tıkla"
         } else {
-            "Click to record  \u{00B7}  Ctrl+Alt+R anywhere"
+            "Kaydetmek için tıkla  \u{00B7}  her yerde Ctrl+Alt+R"
         };
         ui.painter().text(
             pos2(c.x, inner.max.y - 4.0),
@@ -472,7 +473,7 @@ impl VoiceMemo {
     }
 
     fn list(&mut self, ui: &mut Ui, area: Rect, theme: &Theme) {
-        kit::section(ui, area.min + vec2(4.0, 0.0), "MEMOS", theme);
+        kit::section(ui, area.min + vec2(4.0, 0.0), "KAYITLAR", theme);
         if !self.memos.is_empty() {
             let total: f32 = self.memos.iter().map(|m| m.secs).sum();
             ui.painter().text(
@@ -489,7 +490,7 @@ impl VoiceMemo {
                 ui,
                 list.center(),
                 icons::MICROPHONE,
-                "Your memos will show up here",
+                "Ses kayıtların burada görünür",
                 theme,
             );
             return;
@@ -579,7 +580,7 @@ impl VoiceMemo {
                         );
                         let fid = Id::new("zenith-voice-rename");
                         let fr =
-                            kit::field(ui, field, text, "Name", fid, Theme::font(SIZE_BODY), theme);
+                            kit::field(ui, field, text, "Ad", fid, Theme::font(SIZE_BODY), theme);
                         if !fr.has_focus() && !fr.lost_focus() {
                             fr.request_focus();
                         }
@@ -616,9 +617,9 @@ impl VoiceMemo {
                     let hovered = ui.rect_contains_pointer(r);
                     if hovered && !resp.dragged() {
                         let icons_at = [
-                            (icons::PENCIL_SIMPLE, "rename", "Rename"),
-                            (icons::FOLDER_OPEN, "reveal", "Show in Explorer"),
-                            (icons::TRASH, "delete", "Move to the Recycle Bin"),
+                            (icons::PENCIL_SIMPLE, "rename", "Yeniden adlandır"),
+                            (icons::FOLDER_OPEN, "reveal", "Gezgin'de göster"),
+                            (icons::TRASH, "delete", "Geri Dönüşüm Kutusu'na taşı"),
                         ];
                         for (k, (glyph, what, tip)) in icons_at.iter().enumerate() {
                             let c = pos2(wave.max.x - 12.0 - k as f32 * 32.0, r.center().y);
@@ -657,7 +658,7 @@ impl VoiceMemo {
                     if !hovered {
                         continue;
                     }
-                    resp.on_hover_text("Drag into a chat or an email");
+                    resp.on_hover_text("Bir sohbete ya da e-postaya sürükle");
                 }
             });
 
@@ -697,7 +698,7 @@ impl VoiceMemo {
                         Ok(()) => {
                             self.memos.remove(i);
                         }
-                        Err(e) => self.toast(format!("Could not delete: {e}")),
+                        Err(e) => self.toast(format!("Silinemedi: {e}")),
                     }
                 }
                 _ => {}
@@ -766,7 +767,7 @@ impl Module for VoiceMemo {
                 Ok(path) => {
                     tracing::info!("voice memo: saved {}", path.display());
                     self.reload();
-                    self.toast("Saved to Music\\Voice memos");
+                    self.toast("Müzik\\Voice memos klasörüne kaydedildi");
                 }
                 Err(e) => self.toast(e),
             }
@@ -845,7 +846,7 @@ impl Module for VoiceMemo {
                 theme.text,
             );
             if resp
-                .on_hover_text("Recording  \u{00B7}  click to stop")
+                .on_hover_text("Kaydediliyor  \u{00B7}  durdurmak için tıkla")
                 .clicked()
             {
                 self.toggle_recording();
@@ -853,7 +854,7 @@ impl Module for VoiceMemo {
             return;
         }
         if kit::tool_tile(ui, ctx, icons::MICROPHONE, false)
-            .on_hover_text("Record a voice memo  \u{00B7}  Ctrl+Alt+R")
+            .on_hover_text("Ses kaydı al  \u{00B7}  Ctrl+Alt+R")
             .clicked()
         {
             self.reload();
@@ -864,7 +865,7 @@ impl Module for VoiceMemo {
     fn ui_page(&mut self, ui: &mut Ui, header: &mut Ui, body: Rect, theme: &Theme) -> bool {
         self.page_seen = Some(Instant::now());
         if widgets::icon_button(header, icons::FOLDER_OPEN, 26.0, false, theme)
-            .on_hover_text("Open Music\\Voice memos")
+            .on_hover_text("Müzik\\Voice memos klasörünü aç")
             .clicked()
             && let Some(dir) = &self.dir
         {
@@ -896,7 +897,7 @@ mod tests {
     fn titles_and_clock() {
         assert_eq!(
             title(Path::new("C:\\m\\Memo 2026-10-20 14-32-05.wav")),
-            "20 Oct, 14:32"
+            "20 Eki, 14:32"
         );
         assert_eq!(title(Path::new("C:\\m\\Groceries.wav")), "Groceries");
         assert_eq!(clock(75.4), "1:15");

@@ -74,7 +74,7 @@ fn tokenize(src: &str) -> Result<Vec<Tok>, String> {
                 }
                 if j > start {
                     let digits: String = chars[start..j].iter().filter(|c| **c != '_').collect();
-                    let v = i64::from_str_radix(&digits, radix).map_err(|_| "Number too big")?;
+                    let v = i64::from_str_radix(&digits, radix).map_err(|_| "Sayı çok büyük")?;
                     out.push(Tok::Num(v as f64));
                     i = j;
                     continue;
@@ -100,7 +100,7 @@ fn tokenize(src: &str) -> Result<Vec<Tok>, String> {
             }
             let text: String = chars[start..i].iter().collect();
             out.push(Tok::Num(
-                text.parse().map_err(|_| format!("Bad number {text}"))?,
+                text.parse().map_err(|_| format!("Geçersiz sayı {text}"))?,
             ));
         } else if c.is_alphabetic() {
             let start = i;
@@ -114,7 +114,7 @@ fn tokenize(src: &str) -> Result<Vec<Tok>, String> {
             out.push(Tok::Op(c));
             i += 1;
         } else {
-            return Err(format!("Unexpected {c}"));
+            return Err(format!("Beklenmeyen {c}"));
         }
     }
     Ok(out)
@@ -148,7 +148,7 @@ struct Parser<'a> {
 
 fn factorial(n: f64) -> Result<f64, String> {
     if n < 0.0 || n.fract() != 0.0 {
-        return Err("Factorial needs a whole number".into());
+        return Err("Faktöriyel için tam sayı gerekir".into());
     }
     if n > 170.0 {
         return Ok(f64::INFINITY);
@@ -217,13 +217,13 @@ impl Parser<'_> {
             } else if self.eat_op('/') {
                 let r = self.unary()?.v;
                 if r == 0.0 {
-                    return Err("Can't divide by zero".into());
+                    return Err("Sıfıra bölünemez".into());
                 }
                 lhs = Val::n(lhs.v / r);
             } else if self.eat_word("mod") {
                 let r = self.unary()?.v;
                 if r == 0.0 {
-                    return Err("Can't divide by zero".into());
+                    return Err("Sıfıra bölünemez".into());
                 }
                 lhs = Val::n(lhs.v.rem_euclid(r));
             } else if self.eat_word("of") || self.implicit() {
@@ -294,8 +294,8 @@ impl Parser<'_> {
                 let arg = self.power()?.v;
                 function(&w, arg, self.angle).map(Val::n)
             }
-            Some(Tok::Op(c)) => Err(format!("Unexpected {c}")),
-            None => Err("Incomplete".into()),
+            Some(Tok::Op(c)) => Err(format!("Beklenmeyen {c}")),
+            None => Err("Eksik".into()),
         }
     }
 }
@@ -323,7 +323,7 @@ fn function(name: &str, x: f64, angle: Angle) -> Result<f64, String> {
     let v = match name {
         "sqrt" => {
             if x < 0.0 {
-                return Err("No square root of a negative".into());
+                return Err("Negatif sayının karekökü yok".into());
             }
             x.sqrt()
         }
@@ -346,7 +346,7 @@ fn function(name: &str, x: f64, angle: Angle) -> Result<f64, String> {
         "floor" => x.floor(),
         "ceil" => x.ceil(),
         "sign" => x.signum(),
-        _ => return Err(format!("Unknown word {name}")),
+        _ => return Err(format!("Bilinmeyen sözcük {name}")),
     };
     // sin(180°) is 0, not 1.2e-16.
     Ok(if v.abs() < 1e-14 { 0.0 } else { v })
@@ -366,13 +366,13 @@ pub fn eval(src: &str, ans: f64, angle: Angle) -> Result<f64, String> {
     let v = p.expr()?;
     if p.at < toks.len() {
         return Err(match &toks[p.at] {
-            Tok::Op(c) => format!("Unexpected {c}"),
-            Tok::Ident(w) => format!("Unknown word {w}"),
-            Tok::Num(_) => "Missing operator".into(),
+            Tok::Op(c) => format!("Beklenmeyen {c}"),
+            Tok::Ident(w) => format!("Bilinmeyen sözcük {w}"),
+            Tok::Num(_) => "İşlem eksik".into(),
         });
     }
     if v.v.is_nan() {
-        return Err("Not a number".into());
+        return Err("Sayı değil".into());
     }
     Ok(v.v)
 }
@@ -521,7 +521,7 @@ pub fn convert(src: &str, ans: f64, angle: Angle) -> Option<Result<(f64, &'stati
     let (fd, ff, _) = unit(from)?;
     let (td, tf, tname) = unit(to)?;
     if fd != td {
-        return Some(Err(format!("Can't convert {from} to {to}")));
+        return Some(Err(format!("{from}, {to} birimine çevrilemez")));
     }
     let v = if num.is_empty() {
         Ok(1.0)
@@ -852,7 +852,7 @@ impl Calculator {
                 .font(Theme::font(SIZE_BODY + 4.0))
                 .text_color(theme.text_dim)
                 .hint_text(
-                    egui::RichText::new("Type a sum, e.g. 12% of 80 or 5 km to mi")
+                    egui::RichText::new("Bir işlem yaz, ör. 12% of 80 ya da 5 km to mi")
                         .color(theme.text_faint),
                 )
                 .desired_width(field.width()),
@@ -907,7 +907,7 @@ impl Calculator {
                 let copy =
                     Rect::from_center_size(pos2(inner.min.x + 10.0, result_y), vec2(24.0, 24.0));
                 if kit::icon_at(ui, copy.center(), 24.0, icons::COPY, false, theme)
-                    .on_hover_text("Copy the answer")
+                    .on_hover_text("Sonucu kopyala")
                     .clicked()
                 {
                     let _ = clipboard::copy_text(&raw_num(v));
@@ -970,13 +970,13 @@ impl Calculator {
     }
 
     fn history_list(&mut self, ui: &mut Ui, area: Rect, theme: &Theme) {
-        kit::section(ui, area.min + vec2(4.0, 0.0), "HISTORY", theme);
+        kit::section(ui, area.min + vec2(4.0, 0.0), "GEÇMİŞ", theme);
         let list = Rect::from_min_max(area.min + vec2(0.0, 20.0), area.max);
         if self.history.is_empty() {
             ui.painter().text(
                 list.center() - vec2(0.0, 20.0),
                 Align2::CENTER_CENTER,
-                "Press Enter to keep an answer",
+                "Sonucu saklamak için Enter'a bas",
                 Theme::font(SIZE_LABEL),
                 theme.text_faint,
             );
@@ -1003,7 +1003,7 @@ impl Calculator {
                         continue;
                     }
                     let resp = kit::row(ui, r, Id::new(("calc-row", i)), false, theme)
-                        .on_hover_text("Click to use  \u{00B7}  Right click to copy");
+                        .on_hover_text("Kullanmak için tıkla  \u{00B7}  kopyalamak için sağ tıkla");
                     kit::one_line(
                         ui,
                         pos2(r.min.x + 10.0, r.min.y + 4.0),
@@ -1166,7 +1166,7 @@ impl Module for Calculator {
             let last = self
                 .history
                 .first()
-                .map_or("Type a sum".to_owned(), |e| e.result.clone());
+                .map_or("Bir işlem yaz".to_owned(), |e| e.result.clone());
             kit::one_line(
                 ui,
                 pos2(rect.min.x, rect.min.y + 21.0),
@@ -1186,7 +1186,7 @@ impl Module for Calculator {
             return;
         }
         if kit::tool_tile(ui, ctx, icons::CALCULATOR, false)
-            .on_hover_text("Calculator and unit converter  \u{00B7}  Ctrl+Alt+K")
+            .on_hover_text("Hesap makinesi ve birim çevirici  \u{00B7}  Ctrl+Alt+K")
             .clicked()
         {
             self.open_page = true;
@@ -1197,7 +1197,7 @@ impl Module for Calculator {
     fn ui_page(&mut self, ui: &mut Ui, header: &mut Ui, body: Rect, theme: &Theme) -> bool {
         if !self.history.is_empty()
             && widgets::icon_button(header, icons::BROOM, 26.0, false, theme)
-                .on_hover_text("Clear the history")
+                .on_hover_text("Geçmişi temizle")
                 .clicked()
         {
             self.history.clear();
@@ -1205,7 +1205,7 @@ impl Module for Calculator {
         }
         let mut sel = usize::from(self.angle == Angle::Rad);
         if widgets::segmented(header, &["DEG", "RAD"], &mut sel, theme)
-            .on_hover_text("Angles for sin, cos and tan")
+            .on_hover_text("sin, cos ve tan için açı birimi")
             .changed()
         {
             self.angle = if sel == 1 { Angle::Rad } else { Angle::Deg };

@@ -681,7 +681,7 @@ pub fn show(
     let caption = caption.or_else(|| {
         editing.then(|| {
             (
-                "Drag to move  ·  tick to show  ·  pick a size".to_owned(),
+                "Taşımak için sürükle  ·  göstermek için işaretle  ·  boyut seç".to_owned(),
                 true,
             )
         })
@@ -750,11 +750,11 @@ fn edit_face(ui: &mut Ui, rect: Rect, tile: &GridTile<'_>, theme: &Theme) -> Opt
         );
     }
     let tip = if locked {
-        "Always shown"
+        "Her zaman görünür"
     } else if shown {
-        "Shown. Click to hide"
+        "Görünür. Gizlemek için tıkla"
     } else {
-        "Hidden. Click to show"
+        "Gizli. Göstermek için tıkla"
     };
     if tick.on_hover_text(tip).clicked() && !locked {
         edit = Some(Edit::ToggleShown(tile.module.id()));
@@ -798,9 +798,9 @@ fn edit_face(ui: &mut Ui, rect: Rect, tile: &GridTile<'_>, theme: &Theme) -> Opt
             );
         }
         let label = match s {
-            TileSize::Small => "Small",
-            TileSize::Wide => "Wide",
-            TileSize::Large => "Large",
+            TileSize::Small => "Küçük",
+            TileSize::Wide => "Geniş",
+            TileSize::Large => "Büyük",
         };
         let tip = if s.area() < native.area() {
             format!("{label}: compact, click it to open")
@@ -871,7 +871,7 @@ fn compact_tile(ui: &mut Ui, inner: Rect, module: &dyn Module, theme: &Theme, ho
     }
 }
 
-/// Disabled tile body: dim icon that crossfades to a "Soon" tag on hover.
+/// Disabled tile body: dim icon that crossfades to a "Yakında" tag on hover.
 fn coming_soon(ui: &mut Ui, inner: Rect, icon: &'static str, theme: &Theme, hovered: bool, id: Id) {
     let ctx = ui.ctx().clone();
     let t = anim::tween(&ctx, id.with("soon"), hovered, 0.12);
@@ -889,7 +889,7 @@ fn coming_soon(ui: &mut Ui, inner: Rect, icon: &'static str, theme: &Theme, hove
         painter.text(
             c,
             Align2::CENTER_CENTER,
-            "Soon",
+            "Yakında",
             Theme::font_semibold(SIZE_LABEL),
             with_alpha(theme.text_dim, t),
         );

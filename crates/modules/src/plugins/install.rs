@@ -41,7 +41,7 @@ pub enum Source {
 impl Source {
     pub fn describe(&self) -> String {
         match self {
-            Source::Example(id) => format!("Built into Zenith (example \"{id}\")"),
+            Source::Example(id) => format!("Zenith'e dahil (örnek \"{id}\")"),
             Source::Archive { file, folder } => {
                 let name = file.file_name().map_or_else(
                     || file.display().to_string(),
@@ -234,7 +234,7 @@ pub fn submit_archive(file: &Path) -> bool {
 pub fn submit_dropped(file: &Path) {
     let reason = match plugins_in_archive(file) {
         Ok(folders) if !folders.is_empty() => return queue_archive(file, folders),
-        Ok(_) => "it has no plugin.toml, so it isn't a Zenith plugin".to_owned(),
+        Ok(_) => "plugin.toml yok, bu bir Zenith eklentisi değil".to_owned(),
         Err(e) => e,
     };
     let name = file
@@ -542,7 +542,7 @@ fn read_archive(file: &Path) -> Result<Vec<Entry>, String> {
         .len();
     if len > MAX_DOWNLOAD {
         return Err(format!(
-            "the archive is larger than {} MB",
+            "arşiv {} MB'tan büyük",
             MAX_DOWNLOAD / 1024 / 1024
         ));
     }
@@ -555,7 +555,7 @@ fn read_archive(file: &Path) -> Result<Vec<Entry>, String> {
     let mut total = 0u64;
     let mut add = |name: &str, reader: &mut dyn Read| -> Result<(), String> {
         if out.len() >= MAX_FILES {
-            return Err("the archive has too many files to be a plugin".into());
+            return Err("arşivde eklenti olamayacak kadar çok dosya var".into());
         }
         let mut data = Vec::new();
         reader
@@ -564,7 +564,7 @@ fn read_archive(file: &Path) -> Result<Vec<Entry>, String> {
             .map_err(|e| format!("reading {name}: {e}"))?;
         total += data.len() as u64;
         if total > MAX_UNPACKED {
-            return Err("the plugin is too large to install".into());
+            return Err("eklenti kurulamayacak kadar büyük".into());
         }
         out.push(Entry {
             name: name.replace('\\', "/"),
@@ -577,7 +577,7 @@ fn read_archive(file: &Path) -> Result<Vec<Entry>, String> {
             let bytes =
                 std::fs::read(file).map_err(|e| format!("reading {}: {e}", file.display()))?;
             let mut archive = zip::ZipArchive::new(Cursor::new(bytes))
-                .map_err(|e| format!("not a valid zip: {e}"))?;
+                .map_err(|e| format!("geçerli bir zip değil: {e}"))?;
             for i in 0..archive.len() {
                 let mut entry = archive
                     .by_index(i)
@@ -592,11 +592,11 @@ fn read_archive(file: &Path) -> Result<Vec<Entry>, String> {
         "7z" => {
             let mut reader =
                 sevenz_rust2::ArchiveReader::open(file, sevenz_rust2::Password::empty())
-                    .map_err(|e| format!("not a valid 7z (or it has a password): {e}"))?;
+                    .map_err(|e| format!("geçerli bir 7z değil (ya da parolalı): {e}"))?;
             // Refuse a decompression bomb before inflating anything.
             let declared: u64 = reader.archive().files.iter().map(|f| f.size()).sum();
             if declared > MAX_UNPACKED {
-                return Err("the plugin is too large to install".into());
+                return Err("eklenti kurulamayacak kadar büyük".into());
             }
             let mut failed = None;
             reader
@@ -617,7 +617,7 @@ fn read_archive(file: &Path) -> Result<Vec<Entry>, String> {
                 return Err(e);
             }
         }
-        _ => return Err("only .zip and .7z files can hold plugins".into()),
+        _ => return Err("eklentiler yalnızca .zip ve .7z dosyalarında olabilir".into()),
     }
     Ok(out)
 }
@@ -626,7 +626,7 @@ fn read_archive(file: &Path) -> Result<Vec<Entry>, String> {
 /// each one plugin.
 pub fn plugins_in_archive(file: &Path) -> Result<Vec<String>, String> {
     if !is_archive(file) {
-        return Err("only .zip and .7z files can hold plugins".into());
+        return Err("eklentiler yalnızca .zip ve .7z dosyalarında olabilir".into());
     }
     let entries = read_archive(file)?;
     Ok(plugin_folders(entries.iter().map(|e| e.name.as_str())))
@@ -651,7 +651,7 @@ fn write_folder(entries: &[Entry], folder: &str, into: &Path) -> Result<(), Stri
             continue;
         }
         if e.name.starts_with('/') || parts.iter().any(|p| *p == ".." || p.contains(':')) {
-            return Err(format!("the archive has an unsafe path: {}", e.name));
+            return Err(format!("arşivde güvensiz bir yol var: {}", e.name));
         }
         let out = parts.iter().fold(into.to_path_buf(), |dir, p| dir.join(p));
         if let Some(parent) = out.parent() {
@@ -662,7 +662,7 @@ fn write_folder(entries: &[Entry], folder: &str, into: &Path) -> Result<(), Stri
         written += 1;
     }
     if written == 0 {
-        return Err(format!("the archive has no folder \"{folder}\""));
+        return Err(format!("arşivde \"{folder}\" klasörü yok"));
     }
     Ok(())
 }

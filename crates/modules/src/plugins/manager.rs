@@ -99,7 +99,7 @@ impl Module for PluginsTile {
     fn ui_page(&mut self, ui: &mut Ui, header: &mut Ui, body: Rect, theme: &Theme) -> bool {
         self.rescan();
         if widgets::icon_button(header, ph::FOLDER_OPEN, zenith_ui::page::HEADER, false, theme)
-            .on_hover_text("Open the plugins folder")
+            .on_hover_text("Eklenti klasörünü aç")
             .clicked()
         {
             let _ = zenith_platform::shell::open(&install::plugins_root().display().to_string());
@@ -123,7 +123,7 @@ impl Module for PluginsTile {
                 kit::section(
                     ui,
                     head.min,
-                    &format!("INSTALLED · {}", self.installed.len()),
+                    &format!("YÜKLÜ · {}", self.installed.len()),
                     theme,
                 );
                 if self.installed.is_empty() {
@@ -132,7 +132,7 @@ impl Module for PluginsTile {
                         ui,
                         rect.center(),
                         ph::PUZZLE_PIECE,
-                        "No plugins yet. Drop a plugin .zip here.",
+                        "Henüz eklenti yok. Bir eklenti .zip dosyasını buraya bırak.",
                         theme,
                     );
                 }
@@ -187,14 +187,14 @@ fn drop_zone(ui: &Ui, body: Rect, theme: &Theme) {
     painter.text(
         c + vec2(0.0, 14.0),
         Align2::CENTER_CENTER,
-        "Drop a plugin .zip or .7z to install",
+        "Kurmak için bir eklenti .zip ya da .7z dosyası bırak",
         Theme::font_semibold(SIZE_BODY + 2.0),
         theme.text,
     );
     painter.text(
         c + vec2(0.0, 36.0),
         Align2::CENTER_CENTER,
-        "One plugin or a bundle of several",
+        "Tek eklenti ya da birkaçının paketi",
         Theme::font(SIZE_LABEL),
         theme.text_dim,
     );
@@ -212,12 +212,12 @@ fn request_card(ui: &mut Ui, rect: Rect, r: &Request, theme: &Theme) {
         State::Done { name } => (ph::CHECK_CIRCLE, name.clone(), String::new()),
         State::Failed(_) => (
             ph::WARNING_CIRCLE,
-            "Couldn't install".to_owned(),
+            "Kurulamadı".to_owned(),
             String::new(),
         ),
         _ => (
             ph::PUZZLE_PIECE,
-            r.expect.clone().unwrap_or_else(|| "Plugin".into()),
+            r.expect.clone().unwrap_or_else(|| "Eklenti".into()),
             String::new(),
         ),
     };
@@ -263,7 +263,7 @@ fn request_card(ui: &mut Ui, rect: Rect, r: &Request, theme: &Theme) {
             kit::one_line(
                 ui,
                 line3,
-                "Reading plugin.toml…",
+                "plugin.toml okunuyor…",
                 text_w,
                 Theme::font(SIZE_LABEL),
                 theme.text_dim,
@@ -274,7 +274,7 @@ fn request_card(ui: &mut Ui, rect: Rect, r: &Request, theme: &Theme) {
             installed,
         } => {
             let desc = if manifest.description.is_empty() {
-                "No description."
+                "Açıklama yok."
             } else {
                 &manifest.description
             };
@@ -289,7 +289,7 @@ fn request_card(ui: &mut Ui, rect: Rect, r: &Request, theme: &Theme) {
             kit::one_line(
                 ui,
                 line4,
-                &format!("Runs: {}", manifest.run.join(" ")),
+                &format!("Çalıştırır: {}", manifest.run.join(" ")),
                 text_w,
                 FontId::monospace(SIZE_LABEL - 0.5),
                 theme.text,
@@ -298,7 +298,7 @@ fn request_card(ui: &mut Ui, rect: Rect, r: &Request, theme: &Theme) {
                 kit::one_line(
                     ui,
                     pos2(x, inner.min.y + 74.0),
-                    &format!("Replaces the version you have ({v}). Its saved data is kept."),
+                    &format!("Yüklü sürümün ({v}) yerine geçer. Kayıtlı verisi korunur."),
                     text_w,
                     Theme::font(SIZE_LABEL - 1.0),
                     theme.accent_fg(),
@@ -309,7 +309,7 @@ fn request_card(ui: &mut Ui, rect: Rect, r: &Request, theme: &Theme) {
             kit::one_line(
                 ui,
                 line3,
-                "Downloading and checking…",
+                "İndiriliyor ve kontrol ediliyor…",
                 text_w,
                 Theme::font(SIZE_LABEL),
                 theme.text_dim,
@@ -323,7 +323,7 @@ fn request_card(ui: &mut Ui, rect: Rect, r: &Request, theme: &Theme) {
             kit::one_line(
                 ui,
                 line3,
-                "Installed. Its tile is in the grid now, at the end.",
+                "Kuruldu. Kutusu şimdi ızgaranın sonunda.",
                 text_w,
                 Theme::font(SIZE_LABEL),
                 theme.text_dim,
@@ -345,7 +345,7 @@ fn request_card(ui: &mut Ui, rect: Rect, r: &Request, theme: &Theme) {
         ui.painter().text(
             pos2(inner.min.x, inner.max.y),
             Align2::LEFT_BOTTOM,
-            "Plugins run with your rights, like any app. Install only code you trust.",
+            "Eklentiler her uygulama gibi senin yetkilerinle çalışır. Yalnızca güvendiğin kodu kur.",
             Theme::font(SIZE_LABEL - 1.0),
             theme.text_faint,
         );
@@ -360,20 +360,20 @@ fn request_card(ui: &mut Ui, rect: Rect, r: &Request, theme: &Theme) {
             let go = Rect::from_min_size(pos2(right - 104.0, top), vec2(104.0, bh));
             let no = Rect::from_min_size(pos2(go.min.x - 84.0, top), vec2(78.0, bh));
             let label = if installed.is_some() {
-                "Update"
+                "Güncelle"
             } else {
-                "Install"
+                "Kur"
             };
             if kit::button(ui, go, label, Some(ph::DOWNLOAD_SIMPLE), true, theme).clicked() {
                 install::confirm(r.id);
             }
-            if kit::button(ui, no, "Cancel", None, false, theme).clicked() {
+            if kit::button(ui, no, "İptal", None, false, theme).clicked() {
                 install::dismiss(r.id);
             }
         }
         State::Done { .. } | State::Failed(_) => {
             let ok = Rect::from_min_size(pos2(right - 84.0, top), vec2(84.0, bh));
-            if kit::button(ui, ok, "Dismiss", None, false, theme).clicked() {
+            if kit::button(ui, ok, "Kapat", None, false, theme).clicked() {
                 install::dismiss(r.id);
             }
         }
@@ -416,7 +416,7 @@ fn installed_row(
     );
     let (line, color) = match install::remove_error(&f.manifest.id) {
         Some(e) => (
-            format!("Couldn't remove: {e}"),
+            format!("Kaldırılamadı: {e}"),
             Color32::from_rgb(0xF0, 0x5A, 0x5A),
         ),
         None => (f.dir.display().to_string(), theme.text_faint),
@@ -448,7 +448,7 @@ fn installed_row(
         return kit::button(
             ui,
             b,
-            if confirm { "Sure?" } else { "Remove" },
+            if confirm { "Emin misin?" } else { "Kaldır" },
             Some(ph::TRASH),
             false,
             theme,

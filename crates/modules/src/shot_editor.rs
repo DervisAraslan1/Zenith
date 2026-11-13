@@ -72,12 +72,12 @@ impl Tool {
 
     fn label(self) -> &'static str {
         match self {
-            Tool::Arrow => "Arrow (1)",
-            Tool::Rect => "Box (2)",
-            Tool::Pen => "Pen (3)",
-            Tool::Marker => "Marker (4)",
-            Tool::Text => "Text (5)",
-            Tool::Pixelate => "Pixelate (6)",
+            Tool::Arrow => "Ok (1)",
+            Tool::Rect => "Kutu (2)",
+            Tool::Pen => "Kalem (3)",
+            Tool::Marker => "Fosforlu (4)",
+            Tool::Text => "Metin (5)",
+            Tool::Pixelate => "Pikselleştir (6)",
         }
     }
 
@@ -533,10 +533,10 @@ impl Editor {
             }
         }
         ui.add_space(10.0);
-        widgets::segmented(ui, &["S", "M", "L"], &mut self.size, theme).on_hover_text("Size");
+        widgets::segmented(ui, &["S", "M", "L"], &mut self.size, theme).on_hover_text("Boyut");
         ui.add_space(6.0);
         if widgets::icon_button(ui, icons::ARROW_U_UP_LEFT, 32.0, false, theme)
-            .on_hover_text("Undo (Ctrl+Z)")
+            .on_hover_text("Geri al (Ctrl+Z)")
             .clicked()
         {
             self.text = None;
@@ -547,20 +547,20 @@ impl Editor {
             ui.spacing_mut().item_spacing.x = 4.0;
             let ctx = ui.ctx().clone();
             if widgets::icon_button(ui, icons::CHECK, 32.0, true, theme)
-                .on_hover_text("Copy and close (Enter)")
+                .on_hover_text("Kopyala ve kapat (Enter)")
                 .clicked()
             {
                 self.close_after_copy = true;
                 self.export(false, &ctx);
             }
             if widgets::icon_button(ui, icons::FLOPPY_DISK, 32.0, false, theme)
-                .on_hover_text("Save to Screenshots (Ctrl+S)")
+                .on_hover_text("Ekran görüntülerine kaydet (Ctrl+S)")
                 .clicked()
             {
                 self.export(true, &ctx);
             }
             if widgets::icon_button(ui, icons::COPY, 32.0, false, theme)
-                .on_hover_text("Copy (Ctrl+C)")
+                .on_hover_text("Kopyala (Ctrl+C)")
                 .clicked()
             {
                 self.export(false, &ctx);
@@ -584,7 +584,7 @@ impl Editor {
         match status {
             Status::Copied => {
                 ui.label(
-                    egui::RichText::new("Copied")
+                    egui::RichText::new("Kopyalandı")
                         .font(font)
                         .color(theme.accent_fg()),
                 );
@@ -593,7 +593,7 @@ impl Editor {
                 let resp = ui
                     .add(
                         egui::Label::new(
-                            egui::RichText::new("Saved · Show")
+                            egui::RichText::new("Kaydedildi · Göster")
                                 .font(font)
                                 .color(theme.accent_fg()),
                         )
@@ -608,7 +608,7 @@ impl Editor {
             }
             Status::Failed(e) => {
                 ui.label(
-                    egui::RichText::new("Failed")
+                    egui::RichText::new("Başarısız")
                         .font(font)
                         .color(theme.text_dim),
                 )
@@ -756,7 +756,7 @@ impl Editor {
             .frame(egui::Frame::NONE)
             .font(font)
             .text_color(Color32::from_rgb(rgb[0], rgb[1], rgb[2]))
-            .hint_text("Type, then Enter")
+            .hint_text("Yaz, sonra Enter")
             .margin(egui::Margin::ZERO)
             .desired_width(600.0);
         let resp = ui.put(rect, edit);

@@ -16,7 +16,7 @@ use std::time::Duration;
 use crate::snipper::Snipper;
 
 const HINT: &str =
-    "Drag over text to copy it  \u{00B7}  Shift for one line  \u{00B7}  Esc to cancel";
+    "Kopyalamak için metni seç  \u{00B7}  tek satır için Shift  \u{00B7}  iptal için Esc";
 
 #[derive(Default)]
 pub struct TextExtractor {

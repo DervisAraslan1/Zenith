@@ -286,7 +286,7 @@ impl Mirror {
                 .lock()
                 .ok()
                 .and_then(|l| l.clone())
-                .unwrap_or_else(|| format!("scrcpy stopped ({code})"));
+                .unwrap_or_else(|| format!("scrcpy durdu ({code})"));
             return Status::Exited(msg);
         }
         if self.hwnd.is_some_and(|h| !embed::is_alive(h)) {
@@ -305,7 +305,7 @@ impl Mirror {
                 self.placed = None;
                 self.visible = true;
             } else if self.started.elapsed() > Duration::from_secs(25) {
-                return Status::Exited("The mirror window never appeared".into());
+                return Status::Exited("Yansıtma penceresi açılmadı".into());
             } else {
                 return Status::Starting;
             }

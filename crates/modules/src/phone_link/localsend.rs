@@ -1066,7 +1066,7 @@ fn send_files(s: &Shared, peer: Peer, paths: Vec<PathBuf>, pin: Option<String>) 
             Ok(v) => match parse_reply(&v) {
                 Some(r) => r,
                 None => {
-                    transfer.set(State::Failed("unexpected answer".into()));
+                    transfer.set(State::Failed("beklenmeyen yanıt".into()));
                     s.ctx.request_repaint();
                     return;
                 }
@@ -1089,7 +1089,7 @@ fn send_files(s: &Shared, peer: Peer, paths: Vec<PathBuf>, pin: Option<String>) 
         }
         Err(ureq::Error::Status(409, _)) => {
             transfer.set(State::Failed(
-                "the device is busy with another transfer".into(),
+                "cihaz başka bir aktarımla meşgul".into(),
             ));
             s.ctx.request_repaint();
             return;
@@ -1174,10 +1174,10 @@ fn cancel_remote(s: &Shared, peer: &Peer, session: &str) {
 
 fn short_error(e: &ureq::Error) -> String {
     match e {
-        ureq::Error::Status(code, _) => format!("refused ({code})"),
+        ureq::Error::Status(code, _) => format!("reddedildi ({code})"),
         ureq::Error::Transport(t) => match t.kind() {
             ureq::ErrorKind::ConnectionFailed | ureq::ErrorKind::Dns => {
-                "device not reachable".into()
+                "cihaza ulaşılamıyor".into()
             }
             _ => t
                 .message()

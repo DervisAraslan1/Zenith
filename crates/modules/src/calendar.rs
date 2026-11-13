@@ -20,29 +20,32 @@ const PAGE: egui::Vec2 = vec2(700.0, 430.0);
 const FIELD_ID: &str = "zenith-calendar-add";
 
 const MONTHS: [&str; 12] = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "Ocak",
+    "Şubat",
+    "Mart",
+    "Nisan",
+    "Mayıs",
+    "Haziran",
+    "Temmuz",
+    "Ağustos",
+    "Eylül",
+    "Ekim",
+    "Kasım",
+    "Aralık",
 ];
 /// Monday first.
 const WEEKDAYS: [&str; 7] = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
+    "Pazartesi",
+    "Salı",
+    "Çarşamba",
+    "Perşembe",
+    "Cuma",
+    "Cumartesi",
+    "Pazar",
 ];
+
+/// Grid headers, Monday first (two letters clash in Turkish: Pazartesi/Pazar).
+const WEEKDAYS_SHORT: [&str; 7] = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
 // ------------------------------------------------------------- dates
 
@@ -99,14 +102,14 @@ fn today() -> (i64, u32) {
     )
 }
 
-/// "Today", "Tomorrow", "In 12 days", "3 days ago".
+/// "Bugün", "Yarın", "In 12 days", "3 days ago".
 fn relative(day: i64, today: i64) -> String {
     match day - today {
-        0 => "Today".into(),
-        1 => "Tomorrow".into(),
-        -1 => "Yesterday".into(),
-        n if n > 0 => format!("In {n} days"),
-        n => format!("{} days ago", -n),
+        0 => "Bugün".into(),
+        1 => "Yarın".into(),
+        -1 => "Dün".into(),
+        n if n > 0 => format!("{n} gün sonra"),
+        n => format!("{} gün önce", -n),
     }
 }
 
@@ -361,7 +364,7 @@ impl Calendar {
             false,
             theme,
         )
-        .on_hover_text("Next month")
+        .on_hover_text("Sonraki ay")
         .clicked()
         {
             self.shift_month(1, now);
@@ -374,7 +377,7 @@ impl Calendar {
             false,
             theme,
         )
-        .on_hover_text("Previous month")
+        .on_hover_text("Önceki ay")
         .clicked()
         {
             self.shift_month(-1, now);
@@ -382,7 +385,7 @@ impl Calendar {
         let (ty, tm, _) = civil_from_days(today);
         if (ty, tm) != self.month || self.selected != today {
             let r = Rect::from_center_size(pos2(inner.max.x - 92.0, title_y), vec2(52.0, 22.0));
-            if kit::chip(ui, r, "Today", false, theme).clicked() {
+            if kit::chip(ui, r, "Bugün", false, theme).clicked() {
                 self.go_to(today, now);
             }
         }
@@ -400,7 +403,7 @@ impl Calendar {
                     grid.min.y + head_h * 0.5,
                 ),
                 Align2::CENTER_CENTER,
-                &WEEKDAYS[wd as usize][..2],
+                WEEKDAYS_SHORT[wd as usize],
                 Theme::font_semibold(SIZE_LABEL - 1.0),
                 if wd >= 5 {
                     theme.text_faint
@@ -536,7 +539,7 @@ impl Calendar {
             kit::one_line(
                 ui,
                 pos2(banner.min.x + 32.0, banner.center().y - 8.0),
-                &format!("Now: {alert}"),
+                &format!("Şimdi: {alert}"),
                 banner.width() - 64.0,
                 Theme::font_semibold(SIZE_LABEL + 1.0),
                 theme.text,
@@ -559,7 +562,7 @@ impl Calendar {
         ui.painter().text(
             pos2(col.min.x + 2.0, cursor),
             Align2::LEFT_TOP,
-            WEEKDAYS[weekday(day) as usize].to_uppercase(),
+            zenith_ui::theme::upper_tr(WEEKDAYS[weekday(day) as usize]),
             Theme::font_semibold(SIZE_LABEL - 1.0),
             theme.accent_fg(),
         );
@@ -579,7 +582,7 @@ impl Calendar {
             pos2(col.min.x + 2.0, cursor + 50.0),
             Align2::LEFT_TOP,
             format!(
-                "{}  \u{00B7}  Week {}{year}",
+                "{}  \u{00B7}  Hafta {}{year}",
                 relative(day, today),
                 iso_week(day)
             ),
@@ -601,7 +604,7 @@ impl Calendar {
             ui.painter().text(
                 pos2(list.min.x + 2.0, list.min.y + 6.0),
                 Align2::LEFT_TOP,
-                "Nothing planned",
+                "Plan yok",
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_faint,
             );
@@ -617,7 +620,7 @@ impl Calendar {
                 kit::section(
                     ui,
                     pos2(list.min.x + 2.0, list.min.y + 34.0),
-                    "COMING UP",
+                    "YAKLAŞANLAR",
                     theme,
                 );
                 for (k, e) in upcoming.iter().enumerate() {
@@ -673,7 +676,7 @@ impl Calendar {
             ui.painter().text(
                 pill.center(),
                 Align2::CENTER_CENTER,
-                e.time.map_or("All day".into(), hhmm),
+                e.time.map_or("Tüm gün".into(), hhmm),
                 Theme::font_semibold(SIZE_LABEL - 1.0),
                 pill_fg,
             );
@@ -694,7 +697,7 @@ impl Calendar {
                     false,
                     theme,
                 )
-                .on_hover_text("Delete")
+                .on_hover_text("Sil")
                 .clicked()
             {
                 remove = Some(*i);
@@ -712,7 +715,7 @@ impl Calendar {
             ui,
             Rect::from_min_max(field.min, pos2(field.max.x - 40.0, field.max.y)),
             &mut self.draft,
-            "Add: 14:30 Dentist",
+            "Ekle: 14:30 Dişçi",
             id,
             Theme::font(SIZE_BODY),
             theme,
@@ -830,7 +833,7 @@ impl Module for Calendar {
             painter.text(
                 c - vec2(0.0, 10.0),
                 Align2::CENTER_CENTER,
-                wd.to_uppercase(),
+                zenith_ui::theme::upper_tr(wd),
                 Theme::font_semibold(SIZE_LABEL - 2.0),
                 accent,
             );
@@ -843,10 +846,10 @@ impl Module for Calendar {
             );
             let x = rect.min.x + 46.0;
             let (top, bottom) = match next_today {
-                Some(e) => (e.time.map_or("Today".into(), hhmm), e.title.clone()),
+                Some(e) => (e.time.map_or("Bugün".into(), hhmm), e.title.clone()),
                 None => (
                     MONTHS[m as usize - 1].to_owned(),
-                    "No more events today".into(),
+                    "Bugün başka etkinlik yok".into(),
                 ),
             };
             kit::one_line(
@@ -870,7 +873,7 @@ impl Module for Calendar {
             painter.text(
                 c - vec2(0.0, 11.0),
                 Align2::CENTER_CENTER,
-                wd.to_uppercase(),
+                zenith_ui::theme::upper_tr(wd),
                 Theme::font_semibold(SIZE_LABEL - 2.0),
                 accent,
             );
@@ -891,7 +894,7 @@ impl Module for Calendar {
         }
         let tip = match next_today {
             Some(e) => format!(
-                "Next: {}{}",
+                "Sıradaki: {}{}",
                 e.time.map_or(String::new(), |t| format!("{} ", hhmm(t))),
                 e.title
             ),
@@ -955,9 +958,9 @@ mod tests {
         );
         assert_eq!(parse_event("3 pizzas"), Some((None, "3 pizzas".into())));
         assert_eq!(parse_event("  "), None);
-        assert_eq!(relative(10, 10), "Today");
-        assert_eq!(relative(15, 10), "In 5 days");
-        assert_eq!(relative(7, 10), "3 days ago");
+        assert_eq!(relative(10, 10), "Bugün");
+        assert_eq!(relative(15, 10), "5 gün sonra");
+        assert_eq!(relative(7, 10), "3 gün önce");
     }
 
     #[test]

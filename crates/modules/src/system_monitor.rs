@@ -307,7 +307,7 @@ impl SystemMonitor {
         let chart = Self::stat_card(
             ui,
             cell(1, 0),
-            "MEMORY",
+            "BELLEK",
             &format!("{:.0}%", self.mem_now() * 100.0),
             &format!("{} of {} in use", human_size(m.used), human_size(m.total)),
             theme,
@@ -321,9 +321,9 @@ impl SystemMonitor {
         let chart = Self::stat_card(
             ui,
             cell(0, 1),
-            "NETWORK",
+            "AĞ",
             &format!("\u{2193} {}", rate(down)),
-            &format!("\u{2191} {} upload", rate(up)),
+            &format!("\u{2191} {} yükleme", rate(up)),
             theme,
         );
         let d: Vec<f32> = self.down.iter().copied().collect();
@@ -337,7 +337,7 @@ impl SystemMonitor {
         let card = cell(1, 1);
         widgets::card(ui.painter(), card, theme);
         let inner = card.shrink2(vec2(14.0, 12.0));
-        kit::section(ui, inner.min, "STORAGE", theme);
+        kit::section(ui, inner.min, "DEPOLAMA", theme);
         let mut y = inner.min.y + 22.0;
         for disk in &self.disks {
             if y + 30.0 > inner.max.y {
@@ -351,7 +351,7 @@ impl SystemMonitor {
                     Id::new(("sysmon-disk", disk.name.as_str())),
                     Sense::click(),
                 )
-                .on_hover_text("Open in Explorer");
+                .on_hover_text("Gezgin'de aç");
             if resp.clicked() {
                 let _ = shell::open(&format!("{}\\", disk.name));
             }
@@ -396,7 +396,7 @@ impl SystemMonitor {
     fn processes(&mut self, ui: &mut Ui, col: Rect, theme: &Theme) {
         widgets::card(ui.painter(), col, theme);
         let inner = col.shrink2(vec2(12.0, 12.0));
-        kit::section(ui, inner.min + vec2(2.0, 0.0), "TOP APPS", theme);
+        kit::section(ui, inner.min + vec2(2.0, 0.0), "EN ÇOK KULLANANLAR", theme);
         let chips = Rect::from_min_size(
             pos2(inner.max.x - 110.0, inner.min.y - 4.0),
             vec2(110.0, 22.0),
@@ -404,7 +404,7 @@ impl SystemMonitor {
         if let Some(i) = kit::chips(
             ui,
             chips,
-            &["CPU", "Memory"],
+            &["CPU", "Bellek"],
             usize::from(self.by_memory),
             theme,
         ) {
@@ -425,7 +425,7 @@ impl SystemMonitor {
             ui.painter().text(
                 inner.center(),
                 Align2::CENTER_CENTER,
-                "Measuring\u{2026}",
+                "Ölçülüyor\u{2026}",
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_faint,
             );
@@ -671,7 +671,7 @@ impl Module for SystemMonitor {
             );
         }
         let tip = format!(
-            "CPU {:.0}%  \u{00B7}  Memory {:.0}% ({} of {})",
+            "CPU %{:.0}  \u{00B7}  Bellek %{:.0} ({} / {})",
             cpu * 100.0,
             mem * 100.0,
             human_size(self.memory.used),
@@ -690,7 +690,7 @@ impl Module for SystemMonitor {
             self.sample();
         }
         if widgets::icon_button(header, icons::ARROW_SQUARE_OUT, 26.0, false, theme)
-            .on_hover_text("Open Task Manager")
+            .on_hover_text("Görev Yöneticisi'ni aç")
             .clicked()
         {
             let _ = shell::open("taskmgr.exe");

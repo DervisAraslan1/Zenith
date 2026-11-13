@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 const MAX_ENTRIES: usize = 40;
 /// Images kept (each holds its full bitmap for pasting back).
 const MAX_IMAGES: usize = 8;
-/// How long the "Copied" confirmation shows.
+/// How long the "Kopyalandı" confirmation shows.
 const COPIED_FOR: f64 = 1.2;
 
 struct Entry {
@@ -223,7 +223,7 @@ impl Module for Clipboard {
     }
 
     fn next_repaint(&self, tile_visible: bool) -> Option<Duration> {
-        // Let the "Copied" confirmation expire on time.
+        // Let the "Kopyalandı" confirmation expire on time.
         (tile_visible && self.copied.is_some()).then(|| Duration::from_millis(250))
     }
 
@@ -346,7 +346,7 @@ impl Module for Clipboard {
         let now = ui.input(|i| i.time);
         if !self.history.entries.is_empty()
             && widgets::icon_button(header, icons::TRASH, 26.0, false, theme)
-                .on_hover_text("Clear history")
+                .on_hover_text("Geçmişi temizle")
                 .clicked()
         {
             self.history.entries.clear();
@@ -356,7 +356,7 @@ impl Module for Clipboard {
             ui.painter().text(
                 body.center(),
                 Align2::CENTER_CENTER,
-                "Nothing copied yet. Text and images you copy show up here.",
+                "Henüz bir şey kopyalanmadı. Kopyaladığın metin ve resimler burada görünür.",
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_dim,
             );
@@ -427,11 +427,11 @@ impl Module for Clipboard {
                                 image(ui, fit(area, img.thumb_size), tex, 4.0);
                                 format!("{}×{}", img.width, img.height)
                             }
-                            None => "Image".into(),
+                            None => "Resim".into(),
                         },
                     };
                     let (footer, color) = if copied {
-                        ("Copied".to_owned(), theme.accent_fg())
+                        ("Kopyalandı".to_owned(), theme.accent_fg())
                     } else {
                         (format!("{label} · {}", age(entry.at)), theme.text_faint)
                     };
@@ -450,7 +450,7 @@ impl Module for Clipboard {
                             icons::X,
                             theme,
                         )
-                        .on_hover_text("Remove")
+                        .on_hover_text("Kaldır")
                         .clicked()
                     {
                         delete = Some(id);

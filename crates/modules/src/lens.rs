@@ -21,7 +21,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::snipper::Snipper;
 
-const HINT: &str = "Drag over what you want to search  \u{00B7}  Esc to cancel";
+const HINT: &str = "Aramak istediğin yeri seç  \u{00B7}  iptal için Esc";
 const UPLOAD_URL: &str = "https://lens.google.com/v3/upload";
 /// Longest edge sent; Lens scales larger images down anyway.
 const MAX_EDGE: u32 = 1600;
@@ -191,7 +191,7 @@ impl Module for Lens {
         if self
             .snipper
             .tile(ui, ctx, icons::SCAN, "lens-tile")
-            .on_hover_text("Search part of the screen with Google Lens (opens your browser)")
+            .on_hover_text("Ekranın bir bölümünü Google Lens ile ara (tarayıcını açar)")
             .clicked()
         {
             self.start();

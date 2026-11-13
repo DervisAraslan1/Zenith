@@ -72,7 +72,7 @@ const BACKGROUNDS: [Option<Color32>; 7] = [
     Some(Color32::from_rgb(0x8A, 0x5C, 0xC2)),
 ];
 
-/// Accent colors for the "Custom" accent.
+/// Accent colors for the "Özel" accent.
 const ACCENTS: [Option<Color32>; 7] = [
     Some(FALLBACK_ACCENT),
     Some(Color32::from_rgb(0x3D, 0x8B, 0xFF)),
@@ -134,7 +134,7 @@ pub struct PageOutput {
     pub back: bool,
     pub changed: bool,
     pub startup_toggled: bool,
-    /// "Manage plugins" was clicked.
+    /// "Eklentileri yönet" was clicked.
     pub open_plugins: bool,
 }
 
@@ -174,7 +174,7 @@ pub fn page(
             }
             hui.add_space(4.0);
             hui.label(
-                egui::RichText::new("Settings")
+                egui::RichText::new("Ayarlar")
                     .font(Theme::font_semibold(SIZE_BODY + 1.0))
                     .color(theme.text),
             );
@@ -197,15 +197,15 @@ pub fn page(
             widgets::card(ui.painter(), right, theme);
 
             let mut lui = card_ui(ui, left);
-            section_title(&mut lui, "Appearance", theme);
+            section_title(&mut lui, "Görünüm", theme);
             // The three dark languages, plus the light palette.
             let mut style_idx = if cfg.theme == ThemeMode::Light {
                 3
             } else {
                 Style::ALL.iter().position(|&s| s == cfg.style).unwrap_or(1)
             };
-            if row(&mut lui, "Style", theme, |ui| {
-                widgets::segmented(ui, &["Horizon", "Night", "Mono", "Light"], &mut style_idx, theme)
+            if row(&mut lui, "Stil", theme, |ui| {
+                widgets::segmented(ui, &["Horizon", "Night", "Mono", "Açık"], &mut style_idx, theme)
             }) {
                 if style_idx == 3 {
                     cfg.theme = ThemeMode::Light;
@@ -221,10 +221,10 @@ pub fn page(
                 AccentSource::System => 2,
                 AccentSource::Custom => 3,
             };
-            if row(&mut lui, "Accent", theme, |ui| {
+            if row(&mut lui, "Vurgu", theme, |ui| {
                 widgets::segmented(
                     ui,
-                    &["Style", "Wallpaper", "Windows", "Custom"],
+                    &["Stil", "Duvar kâğıdı", "Windows", "Özel"],
                     &mut accent_idx,
                     theme,
                 )
@@ -244,29 +244,29 @@ pub fn page(
                 .iter()
                 .position(|&p| p == cfg.placement)
                 .unwrap_or(1);
-            if row(&mut lui, "Position", theme, |ui| {
-                widgets::segmented(ui, &["Left", "Center", "Right"], &mut pos_idx, theme)
+            if row(&mut lui, "Konum", theme, |ui| {
+                widgets::segmented(ui, &["Sol", "Orta", "Sağ"], &mut pos_idx, theme)
             }) {
                 cfg.placement = Placement::ALL[pos_idx];
                 out.changed = true;
             }
             let mut hide = cfg.hide_in_fullscreen;
-            if row(&mut lui, "Hide in fullscreen", theme, |ui| {
+            if row(&mut lui, "Tam ekranda gizle", theme, |ui| {
                 widgets::toggle(ui, &mut hide, theme)
-                    .on_hover_text("Fade the notch out while a game or video is fullscreen")
+                    .on_hover_text("Oyun ya da video tam ekrandayken çentiği gizler")
             }) {
                 cfg.hide_in_fullscreen = hide;
                 out.changed = true;
             }
 
             let mut rui = card_ui(ui, right);
-            section_title(&mut rui, "Behavior", theme);
+            section_title(&mut rui, "Davranış", theme);
             let mut mon_idx = match cfg.monitor {
                 MonitorMode::Primary => 0,
                 MonitorMode::Cursor => 1,
             };
-            if row(&mut rui, "Monitor", theme, |ui| {
-                widgets::segmented(ui, &["Primary", "Follow cursor"], &mut mon_idx, theme)
+            if row(&mut rui, "Ekran", theme, |ui| {
+                widgets::segmented(ui, &["Birincil", "İmleci izle"], &mut mon_idx, theme)
             }) {
                 cfg.monitor = [MonitorMode::Primary, MonitorMode::Cursor][mon_idx];
                 out.changed = true;
@@ -276,21 +276,21 @@ pub fn page(
                 .iter()
                 .position(|&d| d == cfg.hover_delay_ms)
                 .unwrap_or(1);
-            if row(&mut rui, "Hover delay", theme, |ui| {
-                widgets::segmented(ui, &["Fast", "Normal", "Calm"], &mut delay_idx, theme)
+            if row(&mut rui, "Açılma gecikmesi", theme, |ui| {
+                widgets::segmented(ui, &["Hızlı", "Normal", "Sakin"], &mut delay_idx, theme)
             }) {
                 cfg.hover_delay_ms = DELAYS[delay_idx];
                 out.changed = true;
             }
             let mut on_top = cfg.on_top;
-            if row(&mut rui, "Always on top", theme, |ui| {
+            if row(&mut rui, "Her zaman üstte", theme, |ui| {
                 widgets::toggle(ui, &mut on_top, theme)
             }) {
                 cfg.on_top = on_top;
                 out.changed = true;
             }
             let mut startup = cfg.launch_at_startup;
-            if row(&mut rui, "Launch at startup", theme, |ui| {
+            if row(&mut rui, "Açılışta başlat", theme, |ui| {
                 widgets::toggle(ui, &mut startup, theme)
             }) {
                 cfg.launch_at_startup = startup;
@@ -310,8 +310,8 @@ pub fn page(
                 widgets::card(ui.painter(), card, theme);
                 let head = Rect::from_min_size(card.min, vec2(card.width(), DISCLOSURE));
                 let (glyph, title, summary) = match section {
-                    CUSTOMIZE => (icons::PALETTE, "Customize", customize_summary(cfg)),
-                    _ => (icons::SLIDERS_HORIZONTAL, "Advanced", advanced_summary(cfg)),
+                    CUSTOMIZE => (icons::PALETTE, "Özelleştir", customize_summary(cfg)),
+                    _ => (icons::SLIDERS_HORIZONTAL, "Gelişmiş", advanced_summary(cfg)),
                 };
                 if widgets::disclosure_header(ui, head, glyph, title, &summary, t, theme).clicked()
                 {
@@ -366,26 +366,26 @@ fn version_header(ui: &mut Ui, header: Rect, theme: &Theme) {
 /// One line beside the Customize title while it is collapsed.
 fn customize_summary(cfg: &Config) -> String {
     let material = match cfg.material {
-        Material::Acrylic => format!("Glass {}%", cfg.glass_opacity),
-        Material::Solid => "Solid".to_owned(),
+        Material::Acrylic => format!("Cam %{}", cfg.glass_opacity),
+        Material::Solid => "Düz".to_owned(),
     };
     let tint = if parse_hex(&cfg.background_hex).is_some() {
         "tinted"
     } else {
-        "neutral"
+        "nötr"
     };
     let grain = if cfg.grain == 0 {
-        "no grain".to_owned()
+        "gren yok".to_owned()
     } else {
-        format!("grain {}%", cfg.grain)
+        format!("gren %{}", cfg.grain)
     };
     format!("{material} · {tint} · {grain}")
 }
 
 fn advanced_summary(cfg: &Config) -> String {
-    let on = |b: bool| if b { "on" } else { "off" };
+    let on = |b: bool| if b { "açık" } else { "kapalı" };
     format!(
-        "Dev mode {}",
+        "Geliştirici modu {}",
         on(cfg.plugin_dev)
     )
 }
@@ -414,8 +414,8 @@ fn customize_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out:
         Material::Acrylic => 0,
         Material::Solid => 1,
     };
-    if row(&mut lui, "Material", theme, |ui| {
-        widgets::segmented(ui, &["Glass", "Solid"], &mut mat_idx, theme)
+    if row(&mut lui, "Malzeme", theme, |ui| {
+        widgets::segmented(ui, &["Cam", "Düz"], &mut mat_idx, theme)
     }) {
         cfg.material = [Material::Acrylic, Material::Solid][mat_idx];
         out.changed = true;
@@ -424,7 +424,7 @@ fn customize_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out:
         None => Some(0),
         Some(c) => BACKGROUNDS.iter().position(|b| *b == Some(c)),
     };
-    if row(&mut lui, "Background", theme, |ui| {
+    if row(&mut lui, "Arka plan", theme, |ui| {
         widgets::swatches(ui, &BACKGROUNDS, &mut bg_idx, theme)
     }) && let Some(i) = bg_idx
     {
@@ -438,7 +438,7 @@ fn customize_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out:
     let transparency = zenith_platform::system::transparency_enabled();
     let span = (OPACITY_MAX - OPACITY_MIN) as f32;
     let mut t = (cfg.glass_opacity.clamp(OPACITY_MIN, OPACITY_MAX) - OPACITY_MIN) as f32 / span;
-    if row(&mut lui, "Glass opacity", theme, |ui| {
+    if row(&mut lui, "Cam opaklığı", theme, |ui| {
         if !glass || !transparency {
             // The solid material is always opaque.
             ui.disable();
@@ -456,7 +456,7 @@ fn customize_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out:
         }
         _ => None,
     };
-    if row(&mut lui, "Accent color", theme, |ui| {
+    if row(&mut lui, "Vurgu rengi", theme, |ui| {
         widgets::swatches(ui, &ACCENTS, &mut accent_idx, theme)
     }) && let Some(Some(c)) = accent_idx.map(|i| ACCENTS[i])
     {
@@ -467,10 +467,10 @@ fn customize_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out:
 
     let mut rui = column(ui, right);
     let mut grain = cfg.grain.min(100) as f32 / 100.0;
-    if row(&mut rui, "Grain", theme, |ui| {
+    if row(&mut rui, "Gren", theme, |ui| {
         let resp = widgets::slider(ui, &mut grain, 110.0, 20, theme);
         let text = if cfg.grain == 0 {
-            "Off".to_owned()
+            "Kapalı".to_owned()
         } else {
             format!("{}%", cfg.grain)
         };
@@ -484,11 +484,11 @@ fn customize_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out:
         .iter()
         .position(|&s| s == cfg.grain_size)
         .unwrap_or(0);
-    if row(&mut rui, "Grain size", theme, |ui| {
+    if row(&mut rui, "Gren boyutu", theme, |ui| {
         if cfg.grain == 0 {
             ui.disable();
         }
-        widgets::segmented(ui, &["Fine", "Medium", "Coarse"], &mut size_idx, theme)
+        widgets::segmented(ui, &["İnce", "Orta", "Kalın"], &mut size_idx, theme)
     }) {
         cfg.grain_size = GrainSize::ALL[size_idx];
         out.changed = true;
@@ -502,7 +502,7 @@ fn customize_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out:
     if zenith_modules::kit::button(
         ui,
         reset,
-        "Reset style",
+        "Stili sıfırla",
         Some(icons::ARROW_COUNTER_CLOCKWISE),
         false,
         theme,
@@ -518,7 +518,7 @@ fn customize_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out:
         ui.painter().text(
             pos2(note.min.x, note.center().y),
             Align2::LEFT_CENTER,
-            "Windows transparency is off",
+            "Windows saydamlığı kapalı",
             Theme::font(SIZE_LABEL),
             theme.text_dim,
         );
@@ -526,9 +526,9 @@ fn customize_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out:
             pos2(note.max.x - 96.0, note.center().y - 13.0),
             vec2(96.0, 26.0),
         );
-        if zenith_modules::kit::button(ui, turn_on, "Turn on", Some(icons::ARROW_SQUARE_OUT), false, theme)
+        if zenith_modules::kit::button(ui, turn_on, "Aç", Some(icons::ARROW_SQUARE_OUT), false, theme)
             .on_hover_text(
-                "Glass and opacity need Transparency effects in Windows Settings > Personalization > Colors",
+                "Cam ve opaklık için Windows Ayarlar > Kişiselleştirme > Renkler > Saydamlık efektleri açık olmalı",
             )
             .clicked()
             && let Err(e) = zenith_platform::shell::open("ms-settings:colors")
@@ -550,7 +550,7 @@ fn value_label(ui: &mut Ui, text: &str, theme: &Theme) {
     );
 }
 
-/// "Manage plugins" at the right of the Advanced header, left of the chevron.
+/// "Eklentileri yönet" at the right of the Advanced header, left of the chevron.
 fn manage_plugins_button(ui: &mut Ui, head: Rect, theme: &Theme, out: &mut PageOutput) {
     let manage = Rect::from_min_size(
         pos2(head.max.x - 44.0 - 132.0, head.center().y - 13.0),
@@ -559,7 +559,7 @@ fn manage_plugins_button(ui: &mut Ui, head: Rect, theme: &Theme, out: &mut PageO
     if zenith_modules::kit::button(
         ui,
         manage,
-        "Manage plugins",
+        "Eklentileri yönet",
         Some(icons::PUZZLE_PIECE),
         false,
         theme,
@@ -589,41 +589,41 @@ fn advanced_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out: 
             .layout(Layout::top_down(Align::Min)),
     );
     let mut dev = cfg.plugin_dev;
-    if row(&mut lui, "Plugin dev mode", theme, |ui| {
+    if row(&mut lui, "Eklenti geliştirici modu", theme, |ui| {
         widgets::toggle(ui, &mut dev, theme)
     }) {
         cfg.plugin_dev = dev;
         out.changed = true;
     }
-    hint(&mut lui, "Restarts a plugin when you save its files", theme);
+    hint(&mut lui, "Dosyaları kaydedilince eklentiyi yeniden başlatır", theme);
 
     let mut renderer_idx = match cfg.renderer {
         Renderer::Auto => 0,
         Renderer::DirectX => 1,
         Renderer::OpenGl => 2,
     };
-    if row(&mut lui, "Renderer", theme, |ui| {
-        widgets::segmented(ui, &["Auto", "DirectX", "OpenGL"], &mut renderer_idx, theme)
-            .on_hover_text("Try OpenGL if the panel flickers; DirectX if it shows a black box")
+    if row(&mut lui, "Çizim motoru", theme, |ui| {
+        widgets::segmented(ui, &["Otomatik", "DirectX", "OpenGL"], &mut renderer_idx, theme)
+            .on_hover_text("Panel titrerse OpenGL'i, siyah kutu görünürse DirectX'i dene")
     }) {
         cfg.renderer = [Renderer::Auto, Renderer::DirectX, Renderer::OpenGl][renderer_idx];
         out.changed = true;
     }
     hint(
         &mut lui,
-        &format!("Using {} · applies after restart", crate::diag::active_renderer()),
+        &format!("Kullanılan: {} · yeniden başlatınca uygulanır", crate::diag::active_renderer()),
         theme,
     );
 
-    // "Open log" at the right, level with the first row.
+    // "Günlüğü aç" at the right, level with the first row.
     let w = rui.available_width();
     let (log_row, _) = rui.allocate_exact_size(vec2(w, ROW), Sense::hover());
     let open_log = Rect::from_min_size(
         pos2(log_row.max.x - 120.0, log_row.center().y - 13.0),
         vec2(120.0, 26.0),
     );
-    if zenith_modules::kit::button(ui, open_log, "Open log", Some(icons::FILE_TEXT), false, theme)
-        .on_hover_text("Shows zenith.log in Explorer, to attach to a bug report")
+    if zenith_modules::kit::button(ui, open_log, "Günlüğü aç", Some(icons::FILE_TEXT), false, theme)
+        .on_hover_text("Hata bildirimine eklemek için zenith.log'u Gezgin'de gösterir")
         .clicked()
         && let Some(path) = crate::diag::log_path()
         && let Err(e) = zenith_platform::shell::reveal(&path)
@@ -659,7 +659,7 @@ fn card_ui(ui: &mut Ui, rect: Rect) -> Ui {
 
 fn section_title(ui: &mut Ui, text: &str, theme: &Theme) {
     ui.label(
-        egui::RichText::new(text.to_uppercase())
+        egui::RichText::new(zenith_ui::theme::upper_tr(text))
             .font(Theme::font_semibold(SIZE_LABEL - 1.0))
             .color(theme.text_faint),
     );

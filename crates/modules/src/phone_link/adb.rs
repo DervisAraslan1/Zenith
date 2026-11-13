@@ -425,10 +425,10 @@ fn go_wireless(serial: &str) -> String {
                 .map(str::to_owned)
         });
     let Some(ip) = ip else {
-        return "The phone is not on Wi-Fi".into();
+        return "Telefon Wi-Fi'ye bağlı değil".into();
     };
     if let Err(e) = device_service(serial, "tcpip:5555") {
-        return format!("Could not switch to Wi-Fi: {e}");
+        return format!("Wi-Fi'ye geçilemedi: {e}");
     }
     // adbd restarts in TCP mode; give it a moment.
     std::thread::sleep(Duration::from_millis(1500));
@@ -436,11 +436,11 @@ fn go_wireless(serial: &str) -> String {
         if let Ok(m) = host(&format!("host:connect:{ip}:5555"))
             && m.contains("connected")
         {
-            return format!("Wireless: {ip}:5555. You can unplug the cable");
+            return format!("Kablosuz: {ip}:5555. Kabloyu çıkarabilirsin");
         }
         std::thread::sleep(Duration::from_secs(1));
     }
-    format!("Could not reach {ip}:5555")
+    format!("{ip}:5555 adresine ulaşılamadı")
 }
 
 fn parse_info(out: &str) -> DeviceInfo {

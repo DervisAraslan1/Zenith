@@ -251,7 +251,7 @@ impl FileShelf {
             Align2::CENTER_CENTER,
             match item.size {
                 Some(b) => human_size(b),
-                None if item.dir => "Folder".to_owned(),
+                None if item.dir => "Klasör".to_owned(),
                 None => String::new(),
             },
             Theme::font(SIZE_LABEL - 1.0),
@@ -283,7 +283,7 @@ impl FileShelf {
                 ),
                 true,
             );
-            if xr.on_hover_text("Remove from the shelf").clicked() {
+            if xr.on_hover_text("Raftan kaldır").clicked() {
                 return CardAction::Remove;
             }
         }
@@ -424,9 +424,9 @@ impl Module for FileShelf {
             self.open_page = true;
         }
         resp.on_hover_text(if count > 0 {
-            "Drag to take everything  \u{00B7}  Click to see the shelf"
+            "Hepsini almak için sürükle  \u{00B7}  rafı görmek için tıkla"
         } else {
-            "Drop files on the notch to park them here"
+            "Dosyaları burada bekletmek için çentiğe bırak"
         });
     }
 
@@ -434,7 +434,7 @@ impl Module for FileShelf {
         self.load_pending(ui.ctx());
         if !self.items.is_empty()
             && widgets::icon_button(header, icons::BROOM, 26.0, false, theme)
-                .on_hover_text("Clear the shelf (the files stay where they are)")
+                .on_hover_text("Rafı temizle (dosyalar yerinde kalır)")
                 .clicked()
         {
             self.items.clear();
@@ -443,7 +443,7 @@ impl Module for FileShelf {
         if !self.items.is_empty() {
             let drag_all = widgets::icon_button(header, icons::HAND_GRABBING, 26.0, false, theme)
                 .interact(Sense::drag())
-                .on_hover_text("Drag to take everything");
+                .on_hover_text("Hepsini almak için sürükle");
             if drag_all.drag_started() {
                 let all = self.items.iter().map(|i| i.path.clone()).collect();
                 self.drag_out(all);
@@ -471,9 +471,9 @@ impl Module for FileShelf {
                 body.center() + vec2(0.0, 16.0),
                 Align2::CENTER_CENTER,
                 if hovering {
-                    "Drop to park them here"
+                    "Burada bekletmek için bırak"
                 } else {
-                    "Drop files on the notch to park them here."
+                    "Dosyaları burada bekletmek için çentiğe bırak."
                 },
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_dim,

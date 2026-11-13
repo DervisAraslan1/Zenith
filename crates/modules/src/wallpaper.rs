@@ -269,7 +269,7 @@ impl Wallpaper {
             .or_else(|| std::env::var_os("USERPROFILE").map(|u| PathBuf::from(u).join("Pictures")));
         let ctx = self.ctx.clone();
         spawn("zenith-wallpaper-pick", move || {
-            let dir = wallpaper::pick_folder("Choose your wallpaper folder", start.as_deref())
+            let dir = wallpaper::pick_folder("Duvar kâğıdı klasörünü seç", start.as_deref())
                 .unwrap_or_else(|e| {
                     tracing::warn!("wallpaper: folder picker: {e}");
                     None
@@ -449,7 +449,7 @@ impl Wallpaper {
         let is_current = self.current.as_deref().is_some_and(|c| same_file(c, shown));
         let applying = self.applying.as_deref() == Some(shown.as_path());
         let label = if applying {
-            format!("Setting {}…", file_name(shown))
+            format!("{} ayarlanıyor…", file_name(shown))
         } else if is_current {
             format!("{}  \u{00B7}  Current", file_name(shown))
         } else {
@@ -485,11 +485,11 @@ impl Wallpaper {
 
     fn empty_state(&mut self, ui: &mut Ui, body: Rect, theme: &Theme) {
         let text = if self.listing {
-            "Looking for pictures…"
+            "Resimler aranıyor…"
         } else if self.folder.is_some() {
-            "No pictures in this folder."
+            "Bu klasörde resim yok."
         } else {
-            "Choose a folder with your wallpapers."
+            "Duvar kâğıtlarının olduğu bir klasör seç."
         };
         ui.painter().text(
             pos2(body.center().x, body.max.y - 58.0),
@@ -515,7 +515,7 @@ impl Wallpaper {
         ui.painter().text(
             button.left_center() + vec2(32.0, 0.0),
             Align2::LEFT_CENTER,
-            "Choose folder",
+            "Klasör seç",
             Theme::font_semibold(SIZE_LABEL + 1.0),
             Color32::WHITE,
         );
@@ -882,7 +882,7 @@ impl Module for Wallpaper {
                         }
                         Err(e) => {
                             tracing::warn!("wallpaper: set {}: {e}", path.display());
-                            self.error = Some("Could not set the wallpaper".into());
+                            self.error = Some("Duvar kâğıdı ayarlanamadı".into());
                         }
                     }
                 }
@@ -951,14 +951,14 @@ impl Module for Wallpaper {
         if resp.clicked() || resp.secondary_clicked() {
             self.open_page = true;
         }
-        resp.on_hover_text("Browse and set your wallpaper");
+        resp.on_hover_text("Duvar kâğıdına göz at ve ayarla");
     }
 
     fn ui_page(&mut self, ui: &mut Ui, header: &mut Ui, body: Rect, theme: &Theme) -> bool {
         if widgets::icon_button(header, icons::FOLDER_OPEN, 26.0, self.picking, theme)
             .on_hover_text(match &self.folder {
                 Some(f) => format!("{}\nClick to choose another folder", f.display()),
-                None => "Choose your wallpaper folder".to_owned(),
+                None => "Duvar kâğıdı klasörünü seç".to_owned(),
             })
             .clicked()
         {
@@ -966,7 +966,7 @@ impl Module for Wallpaper {
         }
         if self.folder.is_some()
             && widgets::icon_button(header, icons::ARROWS_CLOCKWISE, 26.0, false, theme)
-                .on_hover_text("Look for new pictures")
+                .on_hover_text("Yeni resimleri ara")
                 .clicked()
             && let Some(folder) = self.folder.clone()
         {

@@ -68,7 +68,7 @@ fn title(text: &str) -> String {
     text.lines()
         .map(|l| l.trim().trim_start_matches('#').trim())
         .find(|l| !l.is_empty())
-        .unwrap_or("New note")
+        .unwrap_or("Yeni not")
         .to_owned()
 }
 
@@ -245,7 +245,7 @@ impl Notes {
                         pos2(row.min.x + 10.0, row.max.y - 9.0),
                         Align2::LEFT_CENTER,
                         if note.dirty.is_some() {
-                            "Editing".to_owned()
+                            "Düzenleniyor".to_owned()
                         } else {
                             ago(note.modified, now)
                         },
@@ -278,7 +278,7 @@ impl Notes {
                     .font(Theme::font(SIZE_BODY))
                     .text_color(theme.text)
                     .hint_text(
-                        egui::RichText::new("Start typing. The first line is the title.")
+                        egui::RichText::new("Yazmaya başla. İlk satır başlık olur.")
                             .color(theme.text_faint),
                     )
                     .desired_width(inner.width())
@@ -418,13 +418,13 @@ impl Module for Notes {
     fn ui_page(&mut self, ui: &mut Ui, header: &mut Ui, body: Rect, theme: &Theme) -> bool {
         if !self.notes.is_empty()
             && widgets::icon_button(header, icons::TRASH, 26.0, false, theme)
-                .on_hover_text("Move this note to the Recycle Bin")
+                .on_hover_text("Bu notu Geri Dönüşüm Kutusu'na taşı")
                 .clicked()
         {
             self.delete_current();
         }
         if widgets::icon_button(header, icons::PLUS, 26.0, false, theme)
-            .on_hover_text("New note")
+            .on_hover_text("Yeni not")
             .clicked()
         {
             self.new_note();
@@ -433,7 +433,7 @@ impl Module for Notes {
             ui.painter().text(
                 body.center(),
                 Align2::CENTER_CENTER,
-                "No notes. Press + to start one.",
+                "Not yok. Başlamak için + tuşuna bas.",
                 Theme::font(SIZE_LABEL + 1.0),
                 theme.text_dim,
             );
@@ -455,7 +455,7 @@ mod tests {
     #[test]
     fn titles_skip_blank_lines_and_heading_marks() {
         assert_eq!(title("\n\n## Groceries\nmilk"), "Groceries");
-        assert_eq!(title("  \n"), "New note");
+        assert_eq!(title("  \n"), "Yeni not");
     }
 
     #[test]

@@ -19,7 +19,7 @@ const DURATIONS: [Option<u64>; 5] = [None, Some(15), Some(30), Some(60), Some(12
 
 fn duration_label(minutes: Option<u64>) -> String {
     match minutes {
-        None => "Always".into(),
+        None => "Her zaman".into(),
         Some(m) if m >= 60 => format!("{} h", m / 60),
         Some(m) => format!("{m} min"),
     }
@@ -191,13 +191,13 @@ impl Module for Coffee {
         }
         let status = match (self.on, self.left()) {
             (Some(_), Some(left)) => remaining_label(left),
-            (Some(_), None) => "Awake".to_owned(),
+            (Some(_), None) => "Uyanık".to_owned(),
             (None, _) => duration_label(DURATIONS[self.choice]),
         };
         painter.text(
             pos2(text.min.x, cy - 7.0),
             Align2::LEFT_CENTER,
-            "Coffee",
+            "Kahve",
             Theme::font_semibold(SIZE_LABEL + 1.0),
             theme.text,
         );
@@ -214,7 +214,7 @@ impl Module for Coffee {
             status_color,
         );
         if !active {
-            resp.on_hover_text("Click to change how long");
+            resp.on_hover_text("Süreyi değiştirmek için tıkla");
         }
 
         // Switch on the right.
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn labels() {
-        assert_eq!(duration_label(None), "Always");
+        assert_eq!(duration_label(None), "Her zaman");
         assert_eq!(duration_label(Some(30)), "30 min");
         assert_eq!(duration_label(Some(120)), "2 h");
         assert_eq!(remaining_label(Duration::from_secs(61)), "2m left");

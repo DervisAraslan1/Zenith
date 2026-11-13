@@ -18,7 +18,7 @@ use crate::module::{Badge, GridTile, Module, ModuleStatus, TileCtx};
 use crate::paint;
 use crate::shell::ContentCtx;
 use crate::spring::SpringParams;
-use crate::theme::{self, SIZE_ICON, SIZE_LABEL, TILE_PADDING, TILE_RADIUS, Theme, with_alpha};
+use crate::theme::{self, SIZE_ICON, SIZE_LABEL, TILE_PADDING, Theme, with_alpha};
 use egui::emath::TSTransform;
 use egui::{Align2, Area, Color32, Id, Order, Rect, Sense, Ui, UiBuilder, Vec2, pos2, vec2};
 
@@ -123,7 +123,7 @@ fn is_compact(tile: &GridTile<'_>) -> bool {
 
 /// Glass tile background: gradient, rim and highlight, with hover glow.
 fn tile_glass(painter: &egui::Painter, rect: Rect, theme: &Theme, active: bool, lift: f32) {
-    let shape = Squircle::new(rect, TILE_RADIUS);
+    let shape = Squircle::new(rect, theme.tile_radius);
     let outline = shape.outline();
     if lift > 0.01 {
         paint::glow(painter, &shape, theme.accent, lift * 0.6);
@@ -475,7 +475,7 @@ pub fn show(
                     if held {
                         painter.rect_filled(
                             rect.translate(vec2(0.0, 5.0)).expand(2.0),
-                            TILE_RADIUS + 2.0,
+                            theme.tile_radius + 2.0,
                             Color32::from_black_alpha(70),
                         );
                     }
@@ -484,7 +484,7 @@ pub fn show(
                     if is_open {
                         painter.rect_stroke(
                             rect.shrink(0.5),
-                            TILE_RADIUS,
+                            theme.tile_radius,
                             egui::Stroke::new(1.0, with_alpha(theme.accent, 0.6)),
                             egui::StrokeKind::Inside,
                         );
@@ -492,7 +492,7 @@ pub fn show(
                     if editing {
                         painter.rect_stroke(
                             rect.shrink(0.5),
-                            TILE_RADIUS,
+                            theme.tile_radius,
                             egui::Stroke::new(1.0, with_alpha(theme.accent, 0.45)),
                             egui::StrokeKind::Inside,
                         );

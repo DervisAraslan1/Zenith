@@ -17,6 +17,10 @@ pub const SIZE_BIG: f32 = 28.0;
 pub const SIZE_ICON: f32 = 18.0;
 
 pub const FAMILY_SEMIBOLD: &str = "zenith-semibold";
+/// Thin display figures (Event Horizon numerals).
+pub const FAMILY_LIGHT: &str = "zenith-light";
+/// Monospace (Omega Mono numerals and labels).
+pub const FAMILY_MONO: &str = "zenith-mono";
 pub const FAMILY_ICON_FILL: &str = "phosphor-fill";
 pub const FAMILY_ICON_REGULAR: &str = "phosphor";
 
@@ -27,6 +31,52 @@ pub enum ThemeMode {
     Light,
     #[default]
     Auto,
+}
+
+/// Zenith's visual languages. Each sets its own palette, corner radii,
+/// numeral font, signature accent and a small signature detail.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Style {
+    /// Void black, borderless tiles, thin figures, a glowing amber-rose
+    /// horizon line along the bottom edge.
+    Horizon,
+    /// Night-blue glass with gold, soft large corners, a star in the pill.
+    #[default]
+    Night,
+    /// Pure black, sharp corners, hairline rims, monospace figures and a
+    /// single omega-orange signal color.
+    Mono,
+}
+
+impl Style {
+    pub const ALL: [Style; 3] = [Style::Horizon, Style::Night, Style::Mono];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Style::Horizon => "Horizon",
+            Style::Night => "Night",
+            Style::Mono => "Mono",
+        }
+    }
+
+    /// The style's own signature accent.
+    pub fn accent(self) -> Color32 {
+        match self {
+            Style::Horizon => Color32::from_rgb(0xFF, 0xB0, 0x67),
+            Style::Night => Color32::from_rgb(0xF5, 0xC2, 0x6B),
+            Style::Mono => Color32::from_rgb(0xFF, 0x5A, 0x1F),
+        }
+    }
+
+    /// Second gradient stop paired with `accent`.
+    pub fn accent2(self, accent: Color32) -> Color32 {
+        match self {
+            Style::Horizon => Color32::from_rgb(0xFF, 0x5C, 0x8A),
+            Style::Night => mix(accent, Color32::from_rgb(0xFF, 0xF0, 0xD0), 0.6),
+            Style::Mono => accent,
+        }
+    }
 }
 
 /// User styling on top of the built-in palette (see the settings page).
@@ -40,6 +90,7 @@ pub struct Look {
     pub grain: f32,
     /// Size of one grain speck in physical pixels.
     pub grain_px: f32,
+    pub style: Style,
 }
 
 impl Default for Look {
@@ -49,6 +100,7 @@ impl Default for Look {
             tint: None,
             grain: 0.35,
             grain_px: 1.0,
+            style: Style::Night,
         }
     }
 }
@@ -62,7 +114,15 @@ const GRAIN_MAX_LIGHT: f32 = 16.0;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
     pub dark: bool,
+    pub style: Style,
     pub accent: Color32,
+    /// Second accent stop for gradients (progress bars, horizon line).
+    pub accent2: Color32,
+    pub tile_radius: f32,
+    /// Corner radius of the open panel.
+    pub panel_radius: f32,
+    /// Corner radius of the collapsed pill.
+    pub pill_radius: f32,
     /// Glass fill, top and bottom of the vertical gradient.
     pub glass_top: Color32,
     pub glass_bottom: Color32,
@@ -98,6 +158,7 @@ impl Theme {
 
     /// [`Theme::new`] with the user's [`Look`] applied.
     pub fn styled(dark: bool, accent: Color32, translucent: bool, look: &Look) -> Self {
+        let style = look.style;
         let glass_alpha = if translucent {
             look.glass_opacity.clamp(0.2, 1.0)
         } else {
@@ -111,54 +172,111 @@ impl Theme {
             Some(t) => mix(base, t, amount),
             None => base,
         };
-        let ink_alpha = if translucent { 0.90 } else { 1.0 };
-        let ink = Ink {
-            pill_top: with_alpha(Color32::from_rgb(24, 24, 28), ink_alpha),
-            pill_bottom: with_alpha(Color32::from_rgb(6, 6, 8), ink_alpha),
-            pill_rim: Color32::from_rgba_unmultiplied(255, 255, 255, 22),
-            pill_highlight: Color32::from_rgba_unmultiplied(255, 255, 255, 34),
-            pill_text: Color32::from_rgb(244, 244, 246),
-            pill_text_dim: Color32::from_rgb(150, 150, 160),
+        let rgb = Color32::from_rgb;
+        let rgba = Color32::from_rgba_unmultiplied;
+        let ink_alpha = if translucent { 0.92 } else { 1.0 };
+        let ink = match style {
+            Style::Horizon => Ink {
+                pill_top: with_alpha(rgb(12, 12, 16), ink_alpha),
+                pill_bottom: with_alpha(rgb(4, 4, 6), ink_alpha),
+                pill_rim: rgba(255, 255, 255, 14),
+                pill_highlight: rgba(255, 255, 255, 30),
+                pill_text: rgb(242, 242, 245),
+                pill_text_dim: rgb(124, 124, 144),
+            },
+            Style::Night => Ink {
+                pill_top: with_alpha(rgb(36, 39, 58), ink_alpha),
+                pill_bottom: with_alpha(rgb(7, 8, 15), ink_alpha),
+                pill_rim: rgba(170, 190, 255, 30),
+                pill_highlight: rgba(255, 255, 255, 40),
+                pill_text: rgb(238, 242, 255),
+                pill_text_dim: rgb(142, 155, 214),
+            },
+            Style::Mono => Ink {
+                pill_top: with_alpha(rgb(0, 0, 0), ink_alpha),
+                pill_bottom: with_alpha(rgb(0, 0, 0), ink_alpha),
+                pill_rim: rgba(255, 255, 255, 40),
+                pill_highlight: rgba(255, 255, 255, 0),
+                pill_text: rgb(237, 237, 237),
+                pill_text_dim: rgb(122, 122, 122),
+            },
         };
-        if dark {
-            Self {
-                dark,
-                accent,
-                glass_top: with_alpha(tinted(Color32::from_rgb(34, 34, 40), 0.30), glass_alpha),
-                glass_bottom: with_alpha(tinted(Color32::from_rgb(18, 18, 22), 0.20), glass_alpha),
-                rim: Color32::from_rgba_unmultiplied(0, 0, 0, 110),
-                highlight: Color32::from_rgba_unmultiplied(255, 255, 255, 46),
-                noise_alpha: (grain * GRAIN_MAX_DARK).round() as u8,
-                grain_px,
-                tile_top: Color32::from_rgba_unmultiplied(255, 255, 255, 18),
-                tile_bottom: Color32::from_rgba_unmultiplied(255, 255, 255, 8),
-                tile_rim: Color32::from_rgba_unmultiplied(255, 255, 255, 14),
-                text: Color32::from_rgb(242, 242, 245),
-                text_dim: Color32::from_rgb(168, 168, 178),
-                text_faint: Color32::from_rgb(110, 110, 120),
-                ..ink.into_theme()
-            }
-        } else {
-            Self {
-                dark,
-                accent,
-                glass_top: with_alpha(tinted(Color32::from_rgb(252, 252, 253), 0.14), glass_alpha),
-                glass_bottom: with_alpha(
-                    tinted(Color32::from_rgb(236, 236, 240), 0.20),
-                    glass_alpha,
-                ),
-                rim: Color32::from_rgba_unmultiplied(0, 0, 0, 40),
-                highlight: Color32::from_rgba_unmultiplied(255, 255, 255, 200),
+        let (tile_radius, panel_radius, pill_radius) = match style {
+            Style::Horizon => (14.0, 26.0, 17.0),
+            Style::Night => (20.0, 30.0, 17.0),
+            Style::Mono => (6.0, 14.0, 9.0),
+        };
+        let base = Theme {
+            dark,
+            style,
+            accent,
+            accent2: style.accent2(accent),
+            tile_radius,
+            panel_radius,
+            pill_radius,
+            grain_px,
+            ..ink.into_theme()
+        };
+        if !dark {
+            return Self {
+                glass_top: with_alpha(tinted(rgb(252, 252, 253), 0.14), glass_alpha),
+                glass_bottom: with_alpha(tinted(rgb(236, 236, 240), 0.20), glass_alpha),
+                rim: rgba(0, 0, 0, 40),
+                highlight: rgba(255, 255, 255, 200),
                 noise_alpha: (grain * GRAIN_MAX_LIGHT).round() as u8,
-                grain_px,
-                tile_top: Color32::from_rgba_unmultiplied(255, 255, 255, 150),
-                tile_bottom: Color32::from_rgba_unmultiplied(255, 255, 255, 90),
-                tile_rim: Color32::from_rgba_unmultiplied(0, 0, 0, 14),
-                text: Color32::from_rgb(24, 24, 28),
-                text_dim: Color32::from_rgb(92, 92, 104),
-                text_faint: Color32::from_rgb(150, 150, 160),
-                ..ink.into_theme()
-            }
+                tile_top: rgba(255, 255, 255, 150),
+                tile_bottom: rgba(255, 255, 255, 90),
+                tile_rim: rgba(0, 0, 0, 14),
+                text: rgb(24, 24, 28),
+                text_dim: rgb(92, 92, 104),
+                text_faint: rgb(132, 132, 142),
+                ..base
+            };
+        }
+        let noise_alpha = (grain * GRAIN_MAX_DARK).round() as u8;
+        match style {
+            Style::Horizon => Self {
+                glass_top: with_alpha(tinted(rgb(14, 14, 20), 0.30), glass_alpha),
+                glass_bottom: with_alpha(tinted(rgb(5, 5, 9), 0.20), glass_alpha),
+                rim: rgba(0, 0, 0, 140),
+                highlight: rgba(255, 255, 255, 26),
+                noise_alpha,
+                tile_top: rgba(255, 255, 255, 13),
+                tile_bottom: rgba(255, 255, 255, 6),
+                tile_rim: rgba(255, 255, 255, 0),
+                text: rgb(242, 242, 245),
+                text_dim: rgb(150, 150, 166),
+                text_faint: rgb(112, 112, 132),
+                ..base
+            },
+            Style::Night => Self {
+                glass_top: with_alpha(tinted(rgb(22, 30, 80), 0.30), glass_alpha),
+                glass_bottom: with_alpha(tinted(rgb(9, 13, 38), 0.20), glass_alpha),
+                rim: rgba(170, 190, 255, 44),
+                highlight: rgba(255, 255, 255, 44),
+                noise_alpha,
+                tile_top: rgba(120, 140, 240, 40),
+                tile_bottom: rgba(60, 76, 170, 30),
+                tile_rim: rgba(170, 190, 255, 28),
+                text: rgb(238, 242, 255),
+                text_dim: rgb(162, 174, 226),
+                text_faint: rgb(120, 132, 192),
+                ..base
+            },
+            Style::Mono => Self {
+                glass_top: with_alpha(tinted(rgb(3, 3, 3), 0.30), glass_alpha),
+                glass_bottom: with_alpha(tinted(rgb(0, 0, 0), 0.20), glass_alpha),
+                rim: rgba(255, 255, 255, 34),
+                highlight: rgba(255, 255, 255, 0),
+                noise_alpha: noise_alpha / 2,
+                tile_top: rgba(255, 255, 255, 8),
+                tile_bottom: rgba(255, 255, 255, 8),
+                tile_rim: rgba(255, 255, 255, 30),
+                text: rgb(237, 237, 237),
+                text_dim: rgb(152, 152, 152),
+                text_faint: rgb(112, 112, 112),
+                ..base
+            },
         }
     }
 
@@ -203,6 +321,21 @@ impl Theme {
     pub fn font_semibold(size: f32) -> FontId {
         FontId::new(size, FontFamily::Name(FAMILY_SEMIBOLD.into()))
     }
+
+    /// Monospace text, for labels and figures in the Mono style.
+    pub fn font_mono(size: f32) -> FontId {
+        FontId::new(size, FontFamily::Name(FAMILY_MONO.into()))
+    }
+
+    /// Big figures (clock, timer, temperature) in the style's own face:
+    /// thin for Horizon, semibold for Night, monospace for Mono.
+    pub fn numeral_font(&self, size: f32) -> FontId {
+        match self.style {
+            Style::Horizon => FontId::new(size, FontFamily::Name(FAMILY_LIGHT.into())),
+            Style::Night => Self::font_semibold(size),
+            Style::Mono => Self::font_mono(size),
+        }
+    }
 }
 
 /// Smoothstep of `progress / 0.7`: how far the pill look has turned into
@@ -228,7 +361,12 @@ impl Ink {
         let z = Color32::TRANSPARENT;
         Theme {
             dark: true,
+            style: Style::Night,
             accent: z,
+            accent2: z,
+            tile_radius: TILE_RADIUS,
+            panel_radius: 32.0,
+            pill_radius: 17.0,
             glass_top: z,
             glass_bottom: z,
             rim: z,
@@ -316,6 +454,27 @@ pub fn install_fonts(ctx: &egui::Context) {
     fonts
         .families
         .insert(FontFamily::Name(FAMILY_SEMIBOLD.into()), semibold_family);
+
+    // Style faces. Each family falls back to the proportional list, so a
+    // missing file never leaves a family undefined.
+    let proportional = fonts
+        .families
+        .get(&FontFamily::Proportional)
+        .cloned()
+        .unwrap_or_default();
+    for (family, key, files) in [
+        (FAMILY_LIGHT, "zenith-light-data", &["segoeuil.ttf", "segoeuisl.ttf"][..]),
+        (FAMILY_MONO, "zenith-mono-data", &["CascadiaMono.ttf", "consola.ttf"][..]),
+    ] {
+        let mut list = proportional.clone();
+        if let Some(bytes) = files.iter().find_map(|f| load(f)) {
+            fonts
+                .font_data
+                .insert(key.into(), FontData::from_owned(bytes).into());
+            list.insert(0, key.into());
+        }
+        fonts.families.insert(FontFamily::Name(family.into()), list);
+    }
 
     egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
     egui_phosphor::add_font_bytes_as_family(

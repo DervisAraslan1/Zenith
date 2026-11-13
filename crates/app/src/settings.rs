@@ -8,7 +8,7 @@ use zenith_ui::bento::PANEL_PADDING;
 use zenith_ui::module::{Module, TileCtx, TileSize};
 use zenith_ui::shell::{ContentCtx, Placement};
 use zenith_ui::theme::{
-    FALLBACK_ACCENT, SIZE_BODY, SIZE_ICON, SIZE_LABEL, Theme, ThemeMode, parse_hex, to_hex,
+    FALLBACK_ACCENT, SIZE_BODY, SIZE_ICON, SIZE_LABEL, Style, Theme, ThemeMode, parse_hex, to_hex,
     with_alpha,
 };
 use zenith_ui::{icons, paint, widgets};
@@ -198,31 +198,39 @@ pub fn page(
 
             let mut lui = card_ui(ui, left);
             section_title(&mut lui, "Appearance", theme);
-            let mut theme_idx = match cfg.theme {
-                ThemeMode::Auto => 0,
-                ThemeMode::Dark => 1,
-                ThemeMode::Light => 2,
+            // The three dark languages, plus the light palette.
+            let mut style_idx = if cfg.theme == ThemeMode::Light {
+                3
+            } else {
+                Style::ALL.iter().position(|&s| s == cfg.style).unwrap_or(1)
             };
-            if row(&mut lui, "Theme", theme, |ui| {
-                widgets::segmented(ui, &["Auto", "Dark", "Light"], &mut theme_idx, theme)
+            if row(&mut lui, "Style", theme, |ui| {
+                widgets::segmented(ui, &["Horizon", "Night", "Mono", "Light"], &mut style_idx, theme)
             }) {
-                cfg.theme = [ThemeMode::Auto, ThemeMode::Dark, ThemeMode::Light][theme_idx];
+                if style_idx == 3 {
+                    cfg.theme = ThemeMode::Light;
+                } else {
+                    cfg.style = Style::ALL[style_idx];
+                    cfg.theme = ThemeMode::Dark;
+                }
                 out.changed = true;
             }
             let mut accent_idx = match cfg.accent {
-                AccentSource::Wallpaper => 0,
-                AccentSource::System => 1,
-                AccentSource::Custom => 2,
+                AccentSource::Theme => 0,
+                AccentSource::Wallpaper => 1,
+                AccentSource::System => 2,
+                AccentSource::Custom => 3,
             };
             if row(&mut lui, "Accent", theme, |ui| {
                 widgets::segmented(
                     ui,
-                    &["Wallpaper", "Windows", "Custom"],
+                    &["Style", "Wallpaper", "Windows", "Custom"],
                     &mut accent_idx,
                     theme,
                 )
             }) {
                 cfg.accent = [
+                    AccentSource::Theme,
                     AccentSource::Wallpaper,
                     AccentSource::System,
                     AccentSource::Custom,

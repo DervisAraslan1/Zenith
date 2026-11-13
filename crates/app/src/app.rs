@@ -263,6 +263,7 @@ impl ZenithApp {
 
     fn accent(&self) -> Color32 {
         match self.cfg.accent {
+            AccentSource::Theme => self.cfg.style.accent(),
             AccentSource::Wallpaper => self.wallpaper_accent.unwrap_or(FALLBACK_ACCENT),
             AccentSource::System => self.system_accent.unwrap_or(FALLBACK_ACCENT),
             AccentSource::Custom => {
@@ -720,6 +721,15 @@ fn icon_font(size: f32, fill: bool) -> FontId {
     FontId::new(size, FontFamily::Name(family.into()))
 }
 
+/// Pill text face: monospace in Mono, semibold otherwise.
+fn pill_font(theme: &Theme) -> FontId {
+    if theme.style == theme::Style::Mono {
+        Theme::font_mono(SIZE_BODY)
+    } else {
+        Theme::font_semibold(SIZE_BODY)
+    }
+}
+
 /// Collapsed pill: live badges from modules (ring + label on the left,
 /// glyphs and pulse dots on the right), inset by the same ink margin on
 /// both sides.
@@ -737,7 +747,7 @@ fn draw_pill(badges: Vec<Badge>, battery: Option<Battery>, ui: &mut Ui, rect: Re
         Badge::Ring { progress, label } => Some((*progress, label.clone())),
         _ => None,
     });
-    match ring {
+    match ring.clone() {
         Some((progress, label)) => {
             let r = 6.0;
             paint::ring(
@@ -752,7 +762,7 @@ fn draw_pill(badges: Vec<Badge>, battery: Option<Battery>, ui: &mut Ui, rect: Re
             ink_text(
                 painter,
                 &label,
-                Theme::font_semibold(SIZE_BODY),
+                pill_font(theme),
                 theme.pill_text,
                 left + 2.0 * r + 7.0,
                 cy,
@@ -763,13 +773,18 @@ fn draw_pill(badges: Vec<Badge>, battery: Option<Battery>, ui: &mut Ui, rect: Re
             ink_text(
                 painter,
                 &clock.time,
-                Theme::font_semibold(SIZE_BODY),
+                pill_font(theme),
                 theme.pill_text,
                 left,
                 cy,
                 false,
             );
         }
+    }
+
+    // Night's signature: a small star at the zenith of the pill.
+    if theme.style == theme::Style::Night && ring.is_none() {
+        zenith_ui::paint::star(painter, rect.center(), 4.5, theme.accent2);
     }
 
     // Right: live glyphs (coffee, phone pulse...), otherwise battery or date.
@@ -1085,6 +1100,8 @@ impl eframe::App for ZenithApp {
         self.shell.expanded_override = self.page_size(&ctx);
         let registry = &mut self.registry;
         let cfg = &mut self.cfg;
+        self.shell.metrics.expanded_radius = theme.panel_radius;
+        self.shell.metrics.collapsed_radius = theme.pill_radius;
         let out = self.shell.show(
             ui,
             &theme,
@@ -1190,6 +1207,19 @@ impl eframe::App for ZenithApp {
         #[cfg(not(feature = "debug-overlay"))]
         let overlay_rect: Option<Rect> = None;
 
+        if theme.style == theme::Style::Horizon && out.visible {
+            let r = out.shape.rect;
+            let inset = theme.pill_radius.max(r.height().min(r.width()) * 0.18);
+            zenith_ui::paint::horizon_line(
+                ui.painter(),
+                r.min.x + inset,
+                r.max.x - inset,
+                r.max.y - 1.5,
+                theme.accent,
+                theme.accent2,
+                out.opacity,
+            );
+        }
         self.update_tint(&ctx, &theme, &out);
         self.update_shape(&ctx, out.visible.then_some(out.shape), overlay_rect);
 

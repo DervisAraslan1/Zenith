@@ -150,6 +150,62 @@ pub fn glow(painter: &Painter, shape: &Squircle, color: Color32, strength: f32) 
     }
 }
 
+/// Event Horizon's signature: a thin line from `x0` to `x1` at `y`,
+/// running `c0` to `c1` and fading out at both ends, with a soft glow
+/// rising above it (kept inside the shape, so window regions never clip it).
+pub fn horizon_line(
+    painter: &Painter,
+    x0: f32,
+    x1: f32,
+    y: f32,
+    c0: Color32,
+    c1: Color32,
+    opacity: f32,
+) {
+    if x1 - x0 < 4.0 || opacity <= 0.01 {
+        return;
+    }
+    const SEGMENTS: usize = 32;
+    let mut mesh = Mesh::default();
+    // (top offset, bottom offset, alpha at the top, alpha at the bottom)
+    let bands = [(-16.0, -1.5, 0.0, 0.45), (-1.5, 1.0, 1.0, 1.0)];
+    for (top, bottom, a_top, a_bottom) in bands {
+        let base = mesh.vertices.len() as u32;
+        for i in 0..=SEGMENTS {
+            let t = i as f32 / SEGMENTS as f32;
+            // Ends fade in and out; the middle stays bright.
+            let envelope = (std::f32::consts::PI * t).sin().powf(0.6) * opacity;
+            let c = crate::theme::mix(c0, c1, t);
+            let x = x0 + (x1 - x0) * t;
+            mesh.colored_vertex(pos2(x, y + top), with_alpha(c, a_top * envelope));
+            mesh.colored_vertex(pos2(x, y + bottom), with_alpha(c, a_bottom * envelope));
+        }
+        for i in 0..SEGMENTS as u32 {
+            let a = base + i * 2;
+            mesh.add_triangle(a, a + 1, a + 2);
+            mesh.add_triangle(a + 1, a + 3, a + 2);
+        }
+    }
+    painter.add(Shape::mesh(mesh));
+}
+
+/// Zenith Night's signature: a four-pointed star with a faint halo.
+pub fn star(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
+    painter.circle_filled(center, radius * 1.6, with_alpha(color, 0.12));
+    let mut mesh = Mesh::default();
+    mesh.colored_vertex(center, color);
+    for i in 0..8 {
+        let a = -std::f32::consts::FRAC_PI_2 + i as f32 * std::f32::consts::FRAC_PI_4;
+        let r = if i % 2 == 0 { radius } else { radius * 0.28 };
+        mesh.colored_vertex(center + vec2(a.cos(), a.sin()) * r, color);
+    }
+    // A fan from the center is exact here: the star is star-shaped around it.
+    for i in 0..8u32 {
+        mesh.add_triangle(0, 1 + i, 1 + (i + 1) % 8);
+    }
+    painter.add(Shape::mesh(mesh));
+}
+
 /// A Phosphor glyph. `fill` selects the filled variant (active state).
 pub fn icon(painter: &Painter, center: Pos2, glyph: &str, size: f32, color: Color32, fill: bool) {
     let family = if fill {

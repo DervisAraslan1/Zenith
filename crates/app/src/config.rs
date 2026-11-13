@@ -3,15 +3,17 @@
 use anyhow::{Context, Result};
 use zenith_ui::module::TileSize;
 use zenith_ui::shell::Placement;
-use zenith_ui::theme::{Look, ThemeMode, parse_hex};
+use zenith_ui::theme::{Look, Style, ThemeMode, parse_hex};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AccentSource {
-    /// Dominant color of the desktop wallpaper.
+    /// The style's own signature color.
     #[default]
+    Theme,
+    /// Dominant color of the desktop wallpaper.
     Wallpaper,
     /// Windows accent color.
     System,
@@ -87,6 +89,8 @@ pub struct ModulesConfig {
 #[serde(default)]
 pub struct Config {
     pub theme: ThemeMode,
+    /// Visual language: Horizon, Night or Mono.
+    pub style: Style,
     pub accent: AccentSource,
     pub accent_hex: String,
     pub monitor: MonitorMode,
@@ -120,8 +124,9 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            theme: ThemeMode::Auto,
-            accent: AccentSource::Wallpaper,
+            theme: ThemeMode::Dark,
+            style: Style::Night,
+            accent: AccentSource::Theme,
             accent_hex: "#7C5CFF".into(),
             monitor: MonitorMode::Primary,
             material: Material::Acrylic,
@@ -161,6 +166,7 @@ impl Config {
             tint: parse_hex(&self.background_hex),
             grain: self.grain.min(100) as f32 / 100.0,
             grain_px: self.grain_size.pixels(),
+            style: self.style,
         }
     }
 

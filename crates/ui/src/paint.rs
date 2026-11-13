@@ -189,6 +189,38 @@ pub fn horizon_line(
     painter.add(Shape::mesh(mesh));
 }
 
+/// Track with an accent-to-accent2 fill up to `frac` (square in Mono).
+pub fn progress_bar(painter: &Painter, rect: egui::Rect, frac: f32, theme: &Theme, track: Color32) {
+    let radius = if theme.style == crate::theme::Style::Mono {
+        0.0
+    } else {
+        rect.height() * 0.5
+    };
+    painter.rect_filled(rect, radius, track);
+    let frac = frac.clamp(0.0, 1.0);
+    if frac <= 0.0 {
+        return;
+    }
+    let fill = egui::Rect::from_min_size(rect.min, vec2(rect.width() * frac, rect.height()));
+    let (c0, c1) = (theme.accent, crate::theme::mix(theme.accent, theme.accent2, frac));
+    let body = if radius > 0.0 {
+        // Round the ends: caps in the end colors, the body between them.
+        painter.circle_filled(pos2(fill.min.x + radius, fill.center().y), radius, c0);
+        painter.circle_filled(pos2(fill.max.x - radius, fill.center().y), radius, c1);
+        fill.shrink2(vec2(radius.min(fill.width() * 0.5), 0.0))
+    } else {
+        fill
+    };
+    let mut m = Mesh::default();
+    m.colored_vertex(body.left_top(), c0);
+    m.colored_vertex(body.right_top(), c1);
+    m.colored_vertex(body.right_bottom(), c1);
+    m.colored_vertex(body.left_bottom(), c0);
+    m.add_triangle(0, 1, 2);
+    m.add_triangle(0, 2, 3);
+    painter.add(Shape::mesh(m));
+}
+
 /// Zenith Night's signature: a four-pointed star with a faint halo.
 pub fn star(painter: &Painter, center: Pos2, radius: f32, color: Color32) {
     painter.circle_filled(center, radius * 1.6, with_alpha(color, 0.12));

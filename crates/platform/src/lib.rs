@@ -32,6 +32,7 @@ pub mod snip;
 pub mod startup;
 pub mod system;
 pub mod url_scheme;
+pub mod levels;
 pub mod wallpaper;
 pub mod window;
 

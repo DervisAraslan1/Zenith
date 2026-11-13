@@ -443,32 +443,11 @@ pub fn round_button(
 
 /// Track with an accent-to-accent2 fill up to `frac`.
 pub fn progress_bar(painter: &egui::Painter, rect: Rect, frac: f32, theme: &Theme) {
-    let radius = if theme.style == zenith_ui::theme::Style::Mono {
-        0.0
-    } else {
-        rect.height() * 0.5
-    };
-    painter.rect_filled(rect, radius, zenith_ui::theme::with_alpha(theme.text, 0.12));
-    let frac = frac.clamp(0.0, 1.0);
-    if frac <= 0.0 {
-        return;
-    }
-    let fill = Rect::from_min_size(rect.min, egui::vec2(rect.width() * frac, rect.height()));
-    let (c0, c1) = (theme.accent, zenith_ui::theme::mix(theme.accent, theme.accent2, frac));
-    let body = if radius > 0.0 {
-        // Round the ends: caps in the end colors, the body between them.
-        painter.circle_filled(egui::pos2(fill.min.x + radius, fill.center().y), radius, c0);
-        painter.circle_filled(egui::pos2(fill.max.x - radius, fill.center().y), radius, c1);
-        fill.shrink2(egui::vec2(radius.min(fill.width() * 0.5), 0.0))
-    } else {
-        fill
-    };
-    let mut m = egui::epaint::Mesh::default();
-    m.colored_vertex(body.left_top(), c0);
-    m.colored_vertex(body.right_top(), c1);
-    m.colored_vertex(body.right_bottom(), c1);
-    m.colored_vertex(body.left_bottom(), c0);
-    m.add_triangle(0, 1, 2);
-    m.add_triangle(0, 2, 3);
-    painter.add(egui::Shape::mesh(m));
+    zenith_ui::paint::progress_bar(
+        painter,
+        rect,
+        frac,
+        theme,
+        zenith_ui::theme::with_alpha(theme.text, 0.12),
+    );
 }

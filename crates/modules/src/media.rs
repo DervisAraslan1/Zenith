@@ -11,7 +11,7 @@ use egui::{
     Align2, Color32, ColorImage, Pos2, Rect, TextureHandle, TextureOptions, Ui, pos2, vec2,
 };
 use zenith_platform::media::{MediaCommand, MediaWatcher, NowPlaying};
-use zenith_ui::module::{Module, TileCtx, TileSize};
+use zenith_ui::module::{Badge, Module, TileCtx, TileSize};
 use zenith_ui::theme::{SIZE_LABEL, Theme, with_alpha};
 use zenith_ui::{icons, paint};
 use std::sync::Arc;
@@ -23,6 +23,8 @@ pub struct Media {
     now: Option<NowPlaying>,
     /// Texture for `now.art`, keyed by the art's allocation.
     art: Option<(usize, TextureHandle)>,
+    /// For uploading the art while the panel is closed (the pill shows it).
+    ctx: Option<egui::Context>,
 }
 
 impl Media {
@@ -93,7 +95,21 @@ impl Module for Media {
         self.now.as_ref().is_some_and(|n| n.playing)
     }
 
+    fn collapsed_badge(&self) -> Option<Badge> {
+        let n = self.now.as_ref()?;
+        n.playing.then(|| Badge::Media {
+            title: if n.title.is_empty() {
+                app_name(&n.source)
+            } else {
+                n.title.clone()
+            },
+            artist: n.artist.clone(),
+            art: self.art.as_ref().map(|(_, t)| t.id()),
+        })
+    }
+
     fn attach(&mut self, ctx: &egui::Context) {
+        self.ctx = Some(ctx.clone());
         let ctx = ctx.clone();
         match MediaWatcher::spawn(move || ctx.request_repaint()) {
             Ok(w) => self.watcher = Some(w),
@@ -107,6 +123,9 @@ impl Module for Media {
             if self.now.as_ref().and_then(|n| n.art.as_ref()).is_none() {
                 self.art = None;
             }
+        }
+        if let Some(ctx) = self.ctx.clone() {
+            let _ = self.art_texture(&ctx);
         }
     }
 

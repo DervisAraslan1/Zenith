@@ -116,6 +116,12 @@ pub struct ZenithApp {
     /// Window rect in physical pixels: (x, y, w, h).
     anchor: Option<(i32, i32, i32, i32)>,
     activatable: bool,
+    /// Volume / brightness changes, and the open indicator (change, egui time).
+    levels: Option<zenith_platform::levels::LevelWatcher>,
+    osd: Option<(zenith_platform::levels::LevelChange, f64)>,
+    /// Output peak for the pill's waveform, and the smoothed bars.
+    meter: zenith_platform::levels::AudioMeter,
+    wave: [f32; 5],
     _instance: InstanceGuard,
     #[cfg(feature = "debug-overlay")]
     overlay: crate::overlay::DebugOverlay,
@@ -247,6 +253,15 @@ impl ZenithApp {
             trimmed: false,
             anchor: None,
             activatable: false,
+            levels: {
+                let c = ctx.clone();
+                zenith_platform::levels::LevelWatcher::spawn(move || c.request_repaint())
+                    .inspect_err(|e| tracing::warn!("level watcher: {e}"))
+                    .ok()
+            },
+            osd: None,
+            meter: Default::default(),
+            wave: [0.0; 5],
             _instance: instance,
             #[cfg(feature = "debug-overlay")]
             overlay: Default::default(),
@@ -733,7 +748,161 @@ fn pill_font(theme: &Theme) -> FontId {
 /// Collapsed pill: live badges from modules (ring + label on the left,
 /// glyphs and pulse dots on the right), inset by the same ink margin on
 /// both sides.
-fn draw_pill(badges: Vec<Badge>, battery: Option<Battery>, ui: &mut Ui, rect: Rect, theme: &Theme) {
+/// How long a volume / brightness change stays in the pill.
+const OSD_SECS: f64 = 1.6;
+
+/// What the collapsed pill shows instead of the clock and battery.
+enum Live {
+    None,
+    Level(zenith_platform::levels::LevelChange),
+    Media {
+        title: String,
+        artist: String,
+        art: Option<egui::TextureId>,
+        wave: [f32; 5],
+    },
+}
+
+/// One line elided with "…" to `width`, vertically centered on `y`.
+fn elide(painter: &egui::Painter, x: f32, y: f32, text: &str, width: f32, font: FontId, color: Color32) {
+    use egui::text::{LayoutJob, TextFormat, TextWrapping};
+    let mut job = LayoutJob::single_section(text.to_owned(), TextFormat::simple(font, color));
+    job.wrap = TextWrapping {
+        max_width: width,
+        max_rows: 1,
+        break_anywhere: true,
+        overflow_character: Some('…'),
+    };
+    let g = painter.layout_job(job);
+    let pos = pos2(x, y - g.size().y * 0.5);
+    painter.galley(pos, g, color);
+}
+
+/// Volume or brightness: glyph, a bar and the value.
+fn draw_level(change: zenith_platform::levels::LevelChange, ui: &Ui, rect: Rect, theme: &Theme) {
+    use zenith_platform::levels::LevelChange;
+    use zenith_ui::icons;
+    let painter = ui.painter();
+    let cy = rect.center().y;
+    let (glyph, level, muted) = match change {
+        LevelChange::Volume { level, muted } => (
+            if muted || level < 0.005 {
+                icons::SPEAKER_X
+            } else if level < 0.34 {
+                icons::SPEAKER_LOW
+            } else {
+                icons::SPEAKER_HIGH
+            },
+            level,
+            muted,
+        ),
+        LevelChange::Brightness(b) => (icons::SUN, b, false),
+    };
+    let x0 = rect.min.x + 19.0;
+    paint::icon(
+        painter,
+        pos2(x0, cy),
+        glyph,
+        16.0,
+        if muted { theme.pill_text_dim } else { theme.accent },
+        false,
+    );
+    let value_x = rect.max.x - 16.0;
+    painter.text(
+        pos2(value_x, cy),
+        egui::Align2::RIGHT_CENTER,
+        format!("{}", (level * 100.0).round() as i32),
+        pill_font(theme),
+        theme.pill_text,
+    );
+    let bar = Rect::from_min_max(pos2(x0 + 18.0, cy - 2.5), pos2(value_x - 30.0, cy + 2.5));
+    if bar.width() > 8.0 {
+        paint::progress_bar(
+            painter,
+            bar,
+            if muted { 0.0 } else { level },
+            theme,
+            theme::with_alpha(theme.pill_text, 0.16),
+        );
+    }
+}
+
+/// Now playing: art, title / artist and a live waveform.
+fn draw_media(
+    title: &str,
+    artist: &str,
+    art: Option<egui::TextureId>,
+    wave: &[f32; 5],
+    ui: &Ui,
+    rect: Rect,
+    theme: &Theme,
+) {
+    let painter = ui.painter();
+    let cy = rect.center().y;
+    let mono = theme.style == theme::Style::Mono;
+    let d = 24.0;
+    let art_rect = Rect::from_center_size(pos2(rect.min.x + 7.0 + d * 0.5, cy), vec2(d, d));
+    let radius = if mono { 5.0 } else { d * 0.5 };
+    match art {
+        Some(tex) => {
+            painter.add(
+                egui::epaint::RectShape::filled(art_rect, radius, Color32::WHITE)
+                    .with_texture(tex, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0))),
+            );
+        }
+        None => {
+            painter.rect_filled(art_rect, radius, theme::with_alpha(theme.accent, 0.25));
+            paint::icon(
+                painter,
+                art_rect.center(),
+                zenith_ui::icons::MUSIC_NOTES,
+                13.0,
+                theme.accent,
+                true,
+            );
+        }
+    }
+    let (bar_w, gap) = (3.0, 3.0);
+    let wave_w = 5.0 * bar_w + 4.0 * gap;
+    let wx = rect.max.x - 15.0 - wave_w;
+    for (i, v) in wave.iter().enumerate() {
+        let h = 3.0 + 14.0 * v.clamp(0.0, 1.0);
+        let x = wx + i as f32 * (bar_w + gap) + bar_w * 0.5;
+        let c = theme::mix(theme.accent, theme.accent2, i as f32 / 4.0);
+        painter.rect_filled(
+            Rect::from_center_size(pos2(x, cy), vec2(bar_w, h)),
+            if mono { 0.0 } else { 1.5 },
+            c,
+        );
+    }
+    let tx = art_rect.max.x + 9.0;
+    let tw = (wx - 10.0 - tx).max(10.0);
+    if artist.is_empty() {
+        elide(painter, tx, cy, title, tw, Theme::font_semibold(12.5), theme.pill_text);
+    } else {
+        elide(painter, tx, cy - 7.0, title, tw, Theme::font_semibold(12.5), theme.pill_text);
+        elide(painter, tx, cy + 7.5, artist, tw, Theme::font(11.0), theme.pill_text_dim);
+    }
+}
+
+fn draw_pill(
+    badges: Vec<Badge>,
+    battery: Option<Battery>,
+    live: &Live,
+    ui: &mut Ui,
+    rect: Rect,
+    theme: &Theme,
+) {
+    match live {
+        Live::Level(change) => return draw_level(*change, ui, rect, theme),
+        Live::Media {
+            title,
+            artist,
+            art,
+            wave,
+        } => return draw_media(title, artist, *art, wave, ui, rect, theme),
+        Live::None => {}
+    }
     const PAD: f32 = 15.0;
     let painter = ui.painter();
     let cy = rect.center().y;
@@ -791,7 +960,7 @@ fn draw_pill(badges: Vec<Badge>, battery: Option<Battery>, ui: &mut Ui, rect: Re
     let mut any_right = false;
     for badge in &badges {
         match badge {
-            Badge::Ring { .. } => {}
+            Badge::Ring { .. } | Badge::Media { .. } => {}
             Badge::Glyph { icon } => {
                 let ink = ink_text(
                     painter,
@@ -1100,6 +1269,55 @@ impl eframe::App for ZenithApp {
         self.shell.expanded_override = self.page_size(&ctx);
         let registry = &mut self.registry;
         let cfg = &mut self.cfg;
+        // Live activity in the collapsed pill: a volume / brightness change
+        // wins for a moment, otherwise what is playing.
+        let t_now = ctx.input(|i| i.time);
+        if let Some(l) = &self.levels {
+            for change in l.poll() {
+                tracing::debug!("level change: {change:?}");
+                self.osd = Some((change, t_now));
+            }
+        }
+        if self.osd.is_some_and(|(_, at)| t_now - at > OSD_SECS) {
+            self.osd = None;
+        }
+        if let Some((_, at)) = self.osd {
+            ctx.request_repaint_after_secs((OSD_SECS - (t_now - at)).max(0.0) as f32 + 0.02);
+        }
+        let collapsed = !self.shell.state.is_open();
+        let media = badges.iter().find_map(|b| match b {
+            Badge::Media { title, artist, art } => Some((title.clone(), artist.clone(), *art)),
+            _ => None,
+        });
+        let live = match (self.osd, media) {
+            (Some((change, _)), _) => Live::Level(change),
+            (None, Some((title, artist, art))) => {
+                if collapsed {
+                    // Bars follow the real output level, with a little motion
+                    // of their own so they never look frozen.
+                    let peak = self.meter.peak();
+                    const SHAPE: [f32; 5] = [0.55, 0.9, 0.7, 1.0, 0.6];
+                    for (i, w) in self.wave.iter_mut().enumerate() {
+                        let wobble = 0.75 + 0.25 * ((t_now * 7.0 + i as f64 * 1.3).sin() as f32);
+                        let target = (peak * 1.7 * SHAPE[i] * wobble).min(1.0);
+                        *w += (target - *w) * 0.35;
+                    }
+                    ctx.request_repaint_after(Duration::from_millis(33));
+                }
+                Live::Media {
+                    title,
+                    artist,
+                    art,
+                    wave: self.wave,
+                }
+            }
+            (None, None) => Live::None,
+        };
+        self.shell.metrics.collapsed.x = match live {
+            Live::Level(_) => 250.0,
+            Live::Media { .. } => 300.0,
+            Live::None => 140.0,
+        };
         self.shell.metrics.expanded_radius = theme.panel_radius;
         self.shell.metrics.collapsed_radius = theme.pill_radius;
         let out = self.shell.show(
@@ -1107,7 +1325,7 @@ impl eframe::App for ZenithApp {
             &theme,
             hidden,
             composited,
-            |ui, rect, _alpha| draw_pill(badges, battery, ui, rect, &theme),
+            |ui, rect, _alpha| draw_pill(badges, battery, &live, ui, rect, &theme),
             |ui, cctx| match page {
                 Page::Bento => {
                     let mut tiles = registry.grid_mut(editing);

@@ -21,6 +21,13 @@ pub enum Badge {
     Glyph { icon: &'static str },
     /// A pulsing dot: something arrived.
     Pulse,
+    /// Now playing: the pill grows into a live activity with the art,
+    /// the title and a waveform.
+    Media {
+        title: String,
+        artist: String,
+        art: Option<egui::TextureId>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

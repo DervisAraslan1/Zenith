@@ -279,7 +279,7 @@ impl PhoneLink {
         }
     }
 
-/// Copies files (folders too) into the phone's Download folder with
+    /// Copies files (folders too) into a Zenith folder on the phone with
     /// `adb push`, on a worker thread.
     fn push_over_adb(&mut self, paths: Vec<PathBuf>) {
         let exe = self.adb.as_ref().and_then(|a| a.exe.clone());
@@ -298,11 +298,16 @@ impl PhoneLink {
                 use std::os::windows::process::CommandExt;
                 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
                 let mut failed = Vec::new();
+                // Zenith's own folder at the top of the phone's storage.
+                let _ = std::process::Command::new(&exe)
+                    .args(["-s", &serial, "shell", "mkdir", "-p", "/sdcard/Zenith"])
+                    .creation_flags(CREATE_NO_WINDOW)
+                    .output();
                 for path in &paths {
                     let ok = std::process::Command::new(&exe)
                         .args(["-s", &serial, "push"])
                         .arg(path)
-                        .arg("/sdcard/Download/")
+                        .arg("/sdcard/Zenith/")
                         .creation_flags(CREATE_NO_WINDOW)
                         .output()
                         .map(|o| o.status.success())
@@ -316,7 +321,7 @@ impl PhoneLink {
                     }
                 }
                 let msg = if failed.is_empty() {
-                    format!("{n} öğe telefonun İndirilenler klasörüne gönderildi")
+                    format!("{n} öğe telefondaki Zenith klasörüne gönderildi")
                 } else {
                     format!("Gönderilemedi: {}", failed.join(", "))
                 };
@@ -1366,7 +1371,7 @@ impl PhoneLink {
         let sub = if target.is_some() {
             "Klasörler yapısını korur. Telefonda LocalSend uygulaması açık olmalı."
         } else if over_adb {
-            "USB / Wi-Fi bağlantısıyla telefonun İndirilenler klasörüne gider. Uygulama gerekmez."
+            "USB / Wi-Fi bağlantısıyla telefondaki Zenith klasörüne gider. Uygulama gerekmez."
         } else {
             "Telefonunda LocalSend'i aç, sonra yukarıdan seç."
         };

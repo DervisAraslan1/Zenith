@@ -122,6 +122,9 @@ pub struct ZenithApp {
     /// Output peak for the pill's waveform, and the smoothed bars.
     meter: zenith_platform::levels::AudioMeter,
     wave: [f32; 5],
+    /// Charger state last frame, and when it was plugged in (egui time).
+    last_charging: Option<bool>,
+    charge_at: Option<f64>,
     _instance: InstanceGuard,
     #[cfg(feature = "debug-overlay")]
     overlay: crate::overlay::DebugOverlay,
@@ -264,6 +267,9 @@ impl ZenithApp {
             osd: None,
             meter: Default::default(),
             wave: [0.0; 5],
+            last_charging: None,
+            // --demo-charge plays the animation once at start.
+            charge_at: std::env::args().any(|a| a == "--demo-charge").then_some(0.5),
             _instance: instance,
             #[cfg(feature = "debug-overlay")]
             overlay: Default::default(),
@@ -752,11 +758,15 @@ fn pill_font(theme: &Theme) -> FontId {
 /// both sides.
 /// How long a volume / brightness change stays in the pill.
 const OSD_SECS: f64 = 1.6;
+/// How long the charging animation plays.
+const CHARGE_SECS: f64 = 2.4;
 
 /// What the collapsed pill shows instead of the clock and battery.
 enum Live {
     None,
     Level(zenith_platform::levels::LevelChange),
+    /// Just plugged in: battery percent and seconds since.
+    Charging { percent: f32, t: f32 },
     Media {
         title: String,
         artist: String,
@@ -829,6 +839,56 @@ fn draw_level(change: zenith_platform::levels::LevelChange, ui: &Ui, rect: Rect,
     }
 }
 
+/// Plugged in: a pulsing bolt, "Şarj oluyor" and a battery filling up.
+fn draw_charging(percent: f32, t: f32, ui: &Ui, rect: Rect, theme: &Theme) {
+    let painter = ui.painter();
+    let cy = rect.center().y;
+    let green = Color32::from_rgb(98, 214, 132);
+    let pulse = 0.5 + 0.5 * (t * 6.0).sin();
+    let c = pos2(rect.min.x + 20.0, cy);
+    painter.circle_filled(
+        c,
+        11.0 + 2.0 * pulse,
+        theme::with_alpha(green, 0.18 * (1.0 - pulse * 0.5)),
+    );
+    paint::icon(painter, c, zenith_ui::icons::LIGHTNING, 15.0, green, true);
+    painter.text(
+        pos2(rect.min.x + 38.0, cy),
+        egui::Align2::LEFT_CENTER,
+        "Şarj oluyor",
+        Theme::font_semibold(12.5),
+        theme.pill_text,
+    );
+    // The battery fills up to the current level, easing out.
+    let k = (t / 0.8).min(1.0);
+    let ease = 1.0 - (1.0 - k).powi(3);
+    let body = Rect::from_min_size(pos2(rect.max.x - 86.0, cy - 6.0), vec2(26.0, 12.0));
+    painter.rect_stroke(
+        body,
+        3.0,
+        egui::Stroke::new(1.2, theme.pill_text_dim),
+        egui::StrokeKind::Inside,
+    );
+    painter.rect_filled(
+        Rect::from_min_size(pos2(body.max.x + 1.0, cy - 2.5), vec2(2.0, 5.0)),
+        1.0,
+        theme.pill_text_dim,
+    );
+    let inner = body.shrink(2.5);
+    painter.rect_filled(
+        Rect::from_min_size(inner.min, vec2(inner.width() * percent / 100.0 * ease, inner.height())),
+        1.5,
+        green,
+    );
+    painter.text(
+        pos2(rect.max.x - 16.0, cy),
+        egui::Align2::RIGHT_CENTER,
+        format!("%{}", (percent * ease).round() as i32),
+        pill_font(theme),
+        theme.pill_text,
+    );
+}
+
 /// Now playing: art, title / artist and a live waveform.
 fn draw_media(
     title: &str,
@@ -897,6 +957,7 @@ fn draw_pill(
 ) {
     match live {
         Live::Level(change) => return draw_level(*change, ui, rect, theme),
+        Live::Charging { percent, t } => return draw_charging(*percent, *t, ui, rect, theme),
         Live::Media {
             title,
             artist,
@@ -996,7 +1057,7 @@ fn draw_pill(
             Some(b) => {
                 let text = ink_text(
                     painter,
-                    &format!("{}%", b.percent),
+                    &format!("%{}", b.percent),
                     Theme::font(SIZE_LABEL + 1.0),
                     theme.pill_text_dim,
                     right,
@@ -1287,11 +1348,35 @@ impl eframe::App for ZenithApp {
             ctx.request_repaint_after_secs((OSD_SECS - (t_now - at)).max(0.0) as f32 + 0.02);
         }
         let collapsed = !self.shell.state.is_open();
+        // Plugged in: a short charging animation.
+        let charging = self.sys.battery.map(|b| b.charging);
+        if self.last_charging == Some(false) && charging == Some(true) {
+            self.charge_at = Some(t_now);
+        }
+        if charging.is_some() {
+            self.last_charging = charging;
+        }
+        if self.charge_at.is_some_and(|at| t_now - at > CHARGE_SECS) {
+            self.charge_at = None;
+        }
+        if self.charge_at.is_some() {
+            ctx.request_repaint_after(Duration::from_millis(16));
+        }
         let media = badges.iter().find_map(|b| match b {
             Badge::Media { title, artist, art } => Some((title.clone(), artist.clone(), *art)),
             _ => None,
         });
-        let live = match (self.osd, media) {
+        let charging_live = match (self.charge_at, self.sys.battery) {
+            (Some(at), Some(b)) if self.osd.is_none() => Some(Live::Charging {
+                percent: b.percent as f32,
+                t: (t_now - at).max(0.0) as f32,
+            }),
+            _ => None,
+        };
+        let live = if let Some(l) = charging_live {
+            l
+        } else {
+            match (self.osd, media) {
             (Some((change, _)), _) => Live::Level(change),
             (None, Some((title, artist, art))) => {
                 if collapsed {
@@ -1320,9 +1405,11 @@ impl eframe::App for ZenithApp {
                 }
             }
             (None, None) => Live::None,
+            }
         };
         self.shell.metrics.collapsed.x = match live {
             Live::Level(_) => 250.0,
+            Live::Charging { .. } => 230.0,
             Live::Media { .. } => 300.0,
             Live::None => 140.0,
         };

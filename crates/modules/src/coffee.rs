@@ -216,6 +216,16 @@ impl Module for Coffee {
         if !active {
             resp.on_hover_text("Süreyi değiştirmek için tıkla");
         }
+        // What it is for, in one line under everything.
+        if rect.height() > 70.0 {
+            painter.text(
+                pos2(rect.min.x, rect.max.y - 6.0),
+                Align2::LEFT_CENTER,
+                "Bilgisayarın uyumasını ve ekranın kararmasını engeller",
+                Theme::font(SIZE_LABEL - 0.5),
+                theme.text_faint,
+            );
+        }
 
         // Switch on the right.
         let sw = Rect::from_center_size(

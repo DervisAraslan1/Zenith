@@ -91,6 +91,10 @@ pub struct Config {
     pub theme: ThemeMode,
     /// Visual language: Horizon, Night or Mono.
     pub style: Style,
+    /// Use the style's own wallpaper (drawn by Zenith) instead of the user's.
+    pub theme_wallpaper: bool,
+    /// The user's wallpaper from before, put back when they choose their own.
+    pub own_wallpaper: String,
     pub accent: AccentSource,
     pub accent_hex: String,
     pub monitor: MonitorMode,
@@ -128,6 +132,8 @@ impl Default for Config {
         Self {
             theme: ThemeMode::Dark,
             style: Style::Night,
+            theme_wallpaper: false,
+            own_wallpaper: String::new(),
             accent: AccentSource::Theme,
             accent_hex: "#7C5CFF".into(),
             monitor: MonitorMode::Primary,

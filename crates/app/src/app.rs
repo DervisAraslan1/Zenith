@@ -124,6 +124,8 @@ pub struct ZenithApp {
     wave: [f32; 5],
     /// Charger state last frame, and when it was plugged in (egui time).
     last_charging: Option<bool>,
+    /// (theme wallpaper on, style) last applied; `None` until the first frame.
+    applied_wallpaper: Option<(bool, theme::Style)>,
     charge_at: Option<f64>,
     _instance: InstanceGuard,
     #[cfg(feature = "debug-overlay")]
@@ -268,6 +270,7 @@ impl ZenithApp {
             meter: Default::default(),
             wave: [0.0; 5],
             last_charging: None,
+            applied_wallpaper: None,
             // --demo-charge plays the animation once at start.
             charge_at: std::env::args().any(|a| a == "--demo-charge").then_some(0.5),
             _instance: instance,
@@ -292,6 +295,37 @@ impl ZenithApp {
             AccentSource::Custom => {
                 theme::parse_hex(&self.cfg.accent_hex).unwrap_or(FALLBACK_ACCENT)
             }
+        }
+    }
+
+    /// Keeps the desktop wallpaper in line with the setting: remembers the
+    /// user's own before the first switch, draws and sets the style's, and
+    /// puts theirs back when they choose it again.
+    fn sync_wallpaper(&mut self) {
+        let want = (self.cfg.theme_wallpaper, self.cfg.style);
+        if self.applied_wallpaper == Some(want) {
+            return;
+        }
+        let first = self.applied_wallpaper.is_none();
+        let was_on = self.applied_wallpaper.is_some_and(|(on, _)| on);
+        self.applied_wallpaper = Some(want);
+        match (want.0, was_on) {
+            (true, _) => {
+                if !was_on
+                    && let Some(cur) = zenith_platform::wallpaper::current_desktop()
+                    && !crate::theme_wallpaper::is_ours(&cur)
+                {
+                    self.cfg.own_wallpaper = cur.display().to_string();
+                    self.save_config();
+                }
+                crate::theme_wallpaper::apply(want.1);
+            }
+            (false, true) if !first => {
+                if !self.cfg.own_wallpaper.is_empty() {
+                    crate::theme_wallpaper::restore(self.cfg.own_wallpaper.clone().into());
+                }
+            }
+            _ => {}
         }
     }
 
@@ -1326,6 +1360,7 @@ impl eframe::App for ZenithApp {
             self.material.translucent(),
             &self.cfg.look(),
         );
+        self.sync_wallpaper();
         let hidden = self.cfg.hide_in_fullscreen && self.sys.fullscreen;
 
         let mut clicked = None;

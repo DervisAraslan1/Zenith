@@ -8,6 +8,7 @@ mod diag;
 #[cfg(feature = "debug-overlay")]
 mod overlay;
 mod settings;
+mod theme_wallpaper;
 mod tray;
 mod watcher;
 

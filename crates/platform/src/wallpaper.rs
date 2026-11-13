@@ -11,9 +11,28 @@ use windows::Win32::UI::Shell::{
     IFileOpenDialog, IShellItem, SHCreateItemFromParsingName, SIGDN_FILESYSPATH,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    SPI_SETDESKWALLPAPER, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE, SystemParametersInfoW,
+    SPI_GETDESKWALLPAPER, SPI_SETDESKWALLPAPER, SPIF_SENDCHANGE, SPIF_UPDATEINIFILE,
+    SystemParametersInfoW,
 };
 use windows::core::{HSTRING, PCWSTR};
+
+/// The current desktop wallpaper file, if there is one.
+pub fn current_desktop() -> Option<PathBuf> {
+    let mut buf = [0u16; 1024];
+    // SAFETY: SPI_GETDESKWALLPAPER writes at most `buf.len()` UTF-16 units.
+    unsafe {
+        SystemParametersInfoW(
+            SPI_GETDESKWALLPAPER,
+            buf.len() as u32,
+            Some(buf.as_mut_ptr() as *mut _),
+            Default::default(),
+        )
+    }
+    .ok()?;
+    let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+    let path = PathBuf::from(String::from_utf16_lossy(&buf[..len]));
+    (!path.as_os_str().is_empty()).then_some(path)
+}
 
 /// Sets `path` as the wallpaper on every monitor. Blocks while Windows
 /// applies it (it fades it in), so call it off the UI thread.

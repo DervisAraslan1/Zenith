@@ -27,6 +27,7 @@ anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 crossbeam-channel.workspace = true
+image.workspace = true
 raw-window-handle = "0.6"
 # Update checks against GitHub Releases (same TLS stack as the plugin installer).
 zenith-ui.workspace = true

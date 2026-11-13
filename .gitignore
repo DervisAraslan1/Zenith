@@ -1,0 +1,7 @@
+/target
+*.log
+# Plugin helpers keep data here when run outside Zenith.
+.data/
+__pycache__/
+node_modules/
+/dist

@@ -1,0 +1,36 @@
+[package]
+name = "zenith-modules"
+description = "Zenith utility modules (coffee, timer, clipboard, color picker, media, notes, stubs)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+egui.workspace = true
+egui-phosphor.workspace = true
+zenith-ui.workspace = true
+zenith-platform.workspace = true
+tracing.workspace = true
+serde.workspace = true
+serde_json = "1"
+# Plugins: plugin.toml manifests and base64 images in views.
+toml.workspace = true
+base64 = "0.22"
+# LocalSend: HTTPS client (phones serve HTTPS with self-signed certificates),
+# a small blocking HTTP server for receiving, and multicast discovery.
+ureq = { version = "2.12", default-features = false, features = ["tls", "json"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+tiny_http = "0.12"
+socket2 = { version = "0.6", features = ["all"] }
+if-addrs = "0.15"
+image.workspace = true
+# Plugin archives dropped on the notch.
+zip = { version = "7.4", default-features = false, features = ["deflate-flate2"] }
+# Plugin archives packed with 7-Zip.
+sevenz-rust2 = { version = "0.24", default-features = false, features = ["util", "deflate", "bzip2"] }
+# QR code encoding (pure Rust, no dependencies).
+qrcodegen = "1.8"
+
+[dev-dependencies]
+# Tests build .7z plugin bundles.
+sevenz-rust2 = { version = "0.24", default-features = false, features = ["util", "compress"] }

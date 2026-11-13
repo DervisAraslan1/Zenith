@@ -494,6 +494,40 @@ impl rustls::client::danger::ServerCertVerifier for AnyCert {
     }
 }
 
+/// Zenith's LocalSend client certificate and key (DER), made once and kept
+/// next to the settings so phones see the same device every time.
+fn client_identity() -> Option<(
+    Vec<rustls::pki_types::CertificateDer<'static>>,
+    rustls::pki_types::PrivateKeyDer<'static>,
+)> {
+    static ID: std::sync::OnceLock<Option<(Vec<u8>, Vec<u8>)>> = std::sync::OnceLock::new();
+    let (cert, key) = ID
+        .get_or_init(|| {
+            let cert_path = crate::kit::settings_path("localsend-client.der")?;
+            let key_path = crate::kit::settings_path("localsend-client.key")?;
+            if let (Ok(c), Ok(k)) = (std::fs::read(&cert_path), std::fs::read(&key_path)) {
+                return Some((c, k));
+            }
+            let made = rcgen::generate_simple_self_signed(vec!["Zenith".to_owned()])
+                .inspect_err(|e| tracing::warn!("localsend: client certificate: {e}"))
+                .ok()?;
+            let (c, k) = (made.cert.der().to_vec(), made.key_pair.serialize_der());
+            if let Some(dir) = cert_path.parent() {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            let _ = std::fs::write(&cert_path, &c);
+            let _ = std::fs::write(&key_path, &k);
+            Some((c, k))
+        })
+        .as_ref()?;
+    Some((
+        vec![rustls::pki_types::CertificateDer::from(cert.clone())],
+        rustls::pki_types::PrivateKeyDer::Pkcs8(rustls::pki_types::PrivatePkcs8KeyDer::from(
+            key.clone(),
+        )),
+    ))
+}
+
 fn agent(connect: Duration) -> ureq::Agent {
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let builder = ureq::AgentBuilder::new()
@@ -502,10 +536,16 @@ fn agent(connect: Duration) -> ureq::Agent {
         .timeout_write(Duration::from_secs(60));
     let tls = rustls::ClientConfig::builder_with_provider(provider.clone())
         .with_safe_default_protocol_versions()
-        .map(|b| {
-            b.dangerous()
-                .with_custom_certificate_verifier(Arc::new(AnyCert(provider)))
-                .with_no_client_auth()
+        .and_then(|b| {
+            let b = b
+                .dangerous()
+                .with_custom_certificate_verifier(Arc::new(AnyCert(provider)));
+            // Newer LocalSend apps refuse HTTPS clients without a certificate
+            // ("CertificateRequired"): show ours, like the official app does.
+            match client_identity() {
+                Some((certs, key)) => b.with_client_auth_cert(certs, key),
+                None => Ok(b.with_no_client_auth()),
+            }
         });
     match tls {
         Ok(tls) => builder.tls_config(Arc::new(tls)).build(),

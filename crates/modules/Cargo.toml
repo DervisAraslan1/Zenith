@@ -20,6 +20,8 @@ base64 = "0.22"
 # a small blocking HTTP server for receiving, and multicast discovery.
 ureq = { version = "2.12", default-features = false, features = ["tls", "json"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+# A self-signed client certificate: newer LocalSend receivers ask for one.
+rcgen = { version = "0.13", default-features = false, features = ["crypto", "ring"] }
 tiny_http = "0.12"
 socket2 = { version = "0.6", features = ["all"] }
 if-addrs = "0.15"

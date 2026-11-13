@@ -116,6 +116,8 @@ pub struct Config {
     pub toggle_hotkey: String,
     /// Plugin dev mode: plugins restart when their files are saved.
     pub plugin_dev: bool,
+    /// Zenith handles the volume keys, so Windows' volume flyout stays away.
+    pub hide_system_osd: bool,
     /// GPU backend; read at startup only.
     pub renderer: Renderer,
     pub modules: ModulesConfig,
@@ -142,6 +144,7 @@ impl Default for Config {
             launch_at_startup: false,
             toggle_hotkey: "ctrl+alt+N".into(),
             plugin_dev: false,
+            hide_system_osd: true,
             renderer: Renderer::Auto,
             modules: ModulesConfig {
                 order: zenith_modules::DEFAULT_ORDER

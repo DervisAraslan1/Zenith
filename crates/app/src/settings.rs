@@ -630,6 +630,14 @@ fn advanced_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out: 
     {
         tracing::warn!("revealing log: {e}");
     }
+    let mut hide_osd = cfg.hide_system_osd;
+    if row(&mut rui, "Windows ses penceresini gizle", theme, |ui| {
+        widgets::toggle(ui, &mut hide_osd, theme)
+    }) {
+        cfg.hide_system_osd = hide_osd;
+        out.changed = true;
+    }
+    hint(&mut rui, "Ses tuşlarını Zenith karşılar, gösterge çentikte çıkar", theme);
 }
 
 /// Small faint line under a row.

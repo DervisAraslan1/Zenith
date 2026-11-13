@@ -219,6 +219,8 @@ impl ZenithApp {
         if flag("--pinned") || page != Page::Bento {
             shell.state.set_pinned(true, 0.0);
         }
+        zenith_platform::volume_keys::set_enabled(cfg.hide_system_osd);
+        zenith_platform::volume_keys::install();
         Ok(Self {
             cfg,
             hwnd,
@@ -1419,6 +1421,7 @@ impl eframe::App for ZenithApp {
             self.shell.placement = self.cfg.placement;
             self.watcher.set_monitor_mode(self.cfg.monitor);
             zenith_modules::plugins::set_dev_mode(self.cfg.plugin_dev);
+            zenith_platform::volume_keys::set_enabled(self.cfg.hide_system_osd);
             // Re-sample now so a monitor switch does not wait for the watcher.
             self.sys.monitor =
                 watcher::sample(self.hwnd, self.cfg.monitor == MonitorMode::Cursor).monitor;

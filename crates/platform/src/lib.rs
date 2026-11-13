@@ -33,6 +33,7 @@ pub mod startup;
 pub mod system;
 pub mod url_scheme;
 pub mod levels;
+pub mod volume_keys;
 pub mod wallpaper;
 pub mod window;
 

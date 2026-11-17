@@ -7,6 +7,10 @@ Rust ile yazıldı: eframe/egui (DirectX 12 veya OpenGL), `windows` crate
 (Win32, DWM, Windows.UI.Composition, Windows.Media.Ocr), `tray-icon` ve
 `global-hotkey`.
 
+<p align="center"><img src="docs/kapali.png" alt="Kapalı çentik" width="400"></p>
+
+![Açık çentik: müzik, odak, hava durumu, pano, telefon, araçlar, ses ve parlaklık](docs/acik.png)
+
 ## Gizlilik
 
 Zenith hiçbir sunucuya veri göndermez: telemetri yok, otomatik güncelleme

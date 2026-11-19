@@ -7,7 +7,7 @@
 //! HSL, HSV or OKLCH, written as modern CSS) and kept in a short history.
 //! The latest color sits as a dot on the tile; right click opens the
 //! history page, where any color copies again in the current format.
-//! Ctrl+Alt+P starts it from anywhere. The history lives in memory only.
+//! Ctrl+Shift+Alt+P starts it from anywhere. The history lives in memory only.
 
 use egui::{Align2, Color32, Id, Rect, ScrollArea, Sense, Stroke, Ui, pos2, vec2};
 use zenith_platform::clipboard;
@@ -240,7 +240,7 @@ impl Module for ColorPicker {
     }
 
     fn default_hotkey(&self) -> Option<&'static str> {
-        Some("ctrl+alt+KeyP")
+        Some("ctrl+shift+alt+KeyP")
     }
 
     fn on_hotkey(&mut self) {
@@ -285,7 +285,7 @@ impl Module for ColorPicker {
             self.history.clear();
         }
         if widgets::icon_button(header, icons::EYEDROPPER, 26.0, false, theme)
-            .on_hover_text("Renk seç (Ctrl+Alt+P)")
+            .on_hover_text("Renk seç (Ctrl+Shift+Alt+P)")
             .clicked()
         {
             self.start();

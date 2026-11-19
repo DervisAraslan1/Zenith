@@ -148,7 +148,7 @@ impl Default for Config {
             hover_delay_ms: 120,
             collapse_grace_ms: 250,
             launch_at_startup: false,
-            toggle_hotkey: "ctrl+alt+N".into(),
+            toggle_hotkey: "ctrl+shift+alt+N".into(),
             plugin_dev: false,
             hide_system_osd: true,
             renderer: Renderer::Auto,
@@ -206,7 +206,15 @@ impl Config {
         let path = path()?;
         match std::fs::read_to_string(&path) {
             Ok(text) => match toml::from_str::<Config>(&text) {
-                Ok(cfg) => Ok(cfg),
+                Ok(mut cfg) => {
+                    // The old default was Ctrl+Alt+N. Ctrl+Alt is AltGr on
+                    // many layouts, so it took characters; move it to the new default.
+                    if cfg.toggle_hotkey.eq_ignore_ascii_case("ctrl+alt+N") {
+                        cfg.toggle_hotkey = Config::default().toggle_hotkey;
+                        cfg.save()?;
+                    }
+                    Ok(cfg)
+                }
                 Err(e) => {
                     tracing::error!("config parse error, using defaults: {e}");
                     let _ = std::fs::rename(&path, path.with_extension("toml.bad"));

@@ -5,7 +5,7 @@
 //! the OCR engine built into Windows (`zenith_platform::ocr`), and the result
 //! is copied with one line per row. Hold Shift as you let go to get it on a
 //! single line. Recognition uses the first of your Windows display
-//! languages that has an OCR pack. Ctrl+Alt+T starts it from anywhere.
+//! languages that has an OCR pack. Ctrl+Shift+Alt+T starts it from anywhere.
 
 use zenith_platform::snip::{SnipMode, SnipOutcome};
 use zenith_platform::{clipboard, ocr};
@@ -106,7 +106,7 @@ impl Module for TextExtractor {
     }
 
     fn default_hotkey(&self) -> Option<&'static str> {
-        Some("ctrl+alt+KeyT")
+        Some("ctrl+shift+alt+KeyT")
     }
 
     fn on_hotkey(&mut self) {

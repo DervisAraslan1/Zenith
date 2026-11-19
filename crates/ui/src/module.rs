@@ -132,7 +132,7 @@ pub trait Module: Send {
     fn overlay_open(&self) -> bool {
         false
     }
-    /// Accelerator in `global-hotkey` syntax, e.g. `"ctrl+alt+KeyC"`.
+    /// Accelerator in `global-hotkey` syntax, e.g. `"ctrl+shift+alt+KeyC"`.
     fn default_hotkey(&self) -> Option<&'static str> {
         None
     }

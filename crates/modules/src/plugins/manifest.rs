@@ -36,7 +36,7 @@ pub struct Manifest {
     /// Seconds between runs in poll mode.
     #[serde(default = "default_interval")]
     pub interval: f64,
-    /// Global shortcut in `global-hotkey` syntax, e.g. `"ctrl+alt+KeyW"`.
+    /// Global shortcut in `global-hotkey` syntax, e.g. `"ctrl+shift+alt+KeyW"`.
     pub hotkey: Option<String>,
     /// Files dropped on the notch go to this plugin while its page is open.
     #[serde(default)]
@@ -178,7 +178,7 @@ mod tests {
             run = ["powershell", "-File", "disk.ps1"]
             mode = "poll"
             interval = 30
-            hotkey = "ctrl+alt+KeyY"
+            hotkey = "ctrl+shift+alt+KeyY"
             page_size = [640, 360]
             "#,
         )

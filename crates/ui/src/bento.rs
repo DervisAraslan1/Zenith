@@ -336,9 +336,9 @@ pub fn show(
         );
         if resp
             .on_hover_text(if pinned {
-                "Sabitlemeyi kaldır · Ctrl+Alt+N"
+                "Sabitlemeyi kaldır · Ctrl+Shift+Alt+N"
             } else {
-                "Paneli açık tut · Ctrl+Alt+N"
+                "Paneli açık tut · Ctrl+Shift+Alt+N"
             })
             .clicked()
         {

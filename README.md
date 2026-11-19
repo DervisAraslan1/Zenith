@@ -75,7 +75,7 @@ sihirbaz görselleri `installer\make_assets.py` ile çizilir.
 ## Kullanım
 
 - Çentiğin üzerine **gel**: açılır. **Uzaklaş**: kapanır.
-- Cama **tıkla**, **Ctrl+Alt+N**'ye bas ya da tepside **Pin open**:
+- Cama **tıkla**, **Ctrl+Shift+Alt+N**'ye bas ya da tepside **Pin open**:
   panel açık kalır.
 - **Konum**: Ayarlar > Position (Sol, Orta, Sağ).
 - **Düzeni düzenle**: ızgaranın sol altındaki kalem. Kutuları sürükle,
@@ -91,12 +91,12 @@ sihirbaz görselleri `installer\make_assets.py` ile çizilir.
 ### Araçlar
 
 - **Ekran araçları** (tüm monitörlerde çalışır):
-  - **Metin çıkarıcı** (Ctrl+Alt+T): Windows OCR ile seçili alandaki metni
+  - **Metin çıkarıcı** (Ctrl+Shift+Alt+T): Windows OCR ile seçili alandaki metni
     kopyalar.
-  - **Renk seçici** (Ctrl+Alt+P): büyüteçle renk kopyalar (HEX, RGB, HSL,
+  - **Renk seçici** (Ctrl+Shift+Alt+P): büyüteçle renk kopyalar (HEX, RGB, HSL,
     HSV, OKLCH).
-  - **Lens araması** (Ctrl+Alt+L): seçili alanı Google Lens'te açar.
-  - **Font bulucu** (Ctrl+Alt+F): seçili metni yüklü fontlarla
+  - **Lens araması** (Ctrl+Shift+Alt+L): seçili alanı Google Lens'te açar.
+  - **Font bulucu** (Ctrl+Shift+Alt+F): seçili metni yüklü fontlarla
     karşılaştırır. İsteğe bağlı [Lens](https://github.com/mixfont/lens)
     modeli (`font_classifier.pt` ve `classes.json`) `%APPDATA%\Zenith\fontnet\`
     klasörüne konursa yüklü olmayan açık kaynak fontları da tanır.
@@ -105,8 +105,8 @@ sihirbaz görselleri `installer\make_assets.py` ile çizilir.
 - **Telefon bağlantısı**: Android telefonun çentiğin içinde. LocalSend ile
   iki yönlü dosya ve metin gönderme, scrcpy ile ekran yansıtma, adb ile
   bildirimler. Gelen dosyalar `Downloads\Zenith` klasörüne iner.
-- **QR kod** (Ctrl+Alt+Q), **Hesap makinesi** (Ctrl+Alt+K), **Sistem
-  izleyici**, **Takvim**, **Hızlı başlat**, **Ses kaydı** (Ctrl+Alt+R),
+- **QR kod** (Ctrl+Shift+Alt+Q), **Hesap makinesi** (Ctrl+Shift+Alt+K), **Sistem
+  izleyici**, **Takvim**, **Hızlı başlat**, **Ses kaydı** (Ctrl+Shift+Alt+R),
   **Duvar kâğıdı**, **Pano geçmişi**, **Notlar**, **Zamanlayıcı**,
   **Medya**, **Dosya rafı**, **Ekran görüntüsü**, **Çizim**, **Kahve**
   (bilgisayarı uyanık tutar).

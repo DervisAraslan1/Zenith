@@ -653,7 +653,10 @@ impl ZenithApp {
         let m = self.shell.metrics;
         let want = match self.page {
             Page::Bento => return None,
-            Page::Settings => m.expanded + vec2(0.0, settings::extra_height(ctx, m.expanded.y)),
+            Page::Settings => {
+                let n = settings::shortcuts(&self.cfg, self.registry.all()).len();
+                m.expanded + vec2(0.0, settings::extra_height(ctx, m.expanded.y, n))
+            }
             Page::Module(id) => self.registry.all().find(|m| m.id() == id)?.page_size()?,
         };
         let fit = self.sys.monitor.map_or(want, |mon| {
@@ -1423,6 +1426,11 @@ impl eframe::App for ZenithApp {
             (typing && ctx.input(|i| i.focused)) || ctx.input(|i| !i.raw.hovered_files.is_empty());
         self.route_dropped_files(&ctx);
         self.shell.expanded_override = self.page_size(&ctx);
+        let shortcuts = if page == Page::Settings {
+            settings::shortcuts(&self.cfg, self.registry.all())
+        } else {
+            Vec::new()
+        };
         let registry = &mut self.registry;
         let cfg = &mut self.cfg;
         // Live activity in the collapsed pill: a volume / brightness change
@@ -1545,7 +1553,7 @@ impl eframe::App for ZenithApp {
                     }
                 }
                 Page::Settings => {
-                    settings_out = settings::page(ui, cctx, &theme, cfg);
+                    settings_out = settings::page(ui, cctx, &theme, cfg, &shortcuts);
                 }
             },
         );

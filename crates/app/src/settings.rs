@@ -22,15 +22,78 @@ const ROW: f32 = 28.0;
 const TOP_CARD: f32 = 182.0;
 /// Height of a collapsible card's clickable header.
 const DISCLOSURE: f32 = 44.0;
-/// Revealed height of each collapsible section's body.
+/// Revealed height of the Customize and Advanced bodies.
 const BODY: [f32; 2] = [4.0 * ROW + 14.0, 3.0 * ROW + 28.0];
+/// One line of the shortcut list.
+const SHORTCUT_ROW: f32 = 26.0;
 /// Page height with every section collapsed, panel padding included.
-const BASE: f32 =
-    2.0 * PANEL_PADDING + HEADER + GAP + TOP_CARD + GAP + DISCLOSURE + GAP + DISCLOSURE;
+const BASE: f32 = 2.0 * PANEL_PADDING
+    + HEADER
+    + GAP
+    + TOP_CARD
+    + GAP
+    + DISCLOSURE
+    + GAP
+    + DISCLOSURE
+    + GAP
+    + DISCLOSURE;
 
 /// Collapsible sections, in page order.
 const CUSTOMIZE: usize = 0;
 const ADVANCED: usize = 1;
+const SHORTCUTS: usize = 2;
+
+/// A global shortcut shown in the Shortcuts card.
+pub struct Shortcut {
+    pub name: String,
+    /// Accelerator as registered, e.g. `caps+KeyQ`.
+    pub accel: String,
+}
+
+/// Every global shortcut: the panel toggle, then each module's own.
+pub fn shortcuts<'a>(cfg: &Config, modules: impl Iterator<Item = &'a dyn Module>) -> Vec<Shortcut> {
+    let mut list = vec![Shortcut {
+        name: "Paneli aç / sabitle".to_owned(),
+        accel: cfg.toggle_hotkey.clone(),
+    }];
+    list.extend(modules.filter_map(|m| {
+        Some(Shortcut {
+            name: m.name().to_owned(),
+            accel: m.default_hotkey()?.to_owned(),
+        })
+    }));
+    list
+}
+
+/// Revealed height of a section's body; the shortcut list grows with the
+/// number of shortcuts (two columns plus a hint line).
+fn body_height(section: usize, shortcuts: usize) -> f32 {
+    match section {
+        SHORTCUTS => shortcuts.div_ceil(2) as f32 * SHORTCUT_ROW + 40.0,
+        i => BODY[i],
+    }
+}
+
+/// Key caps for an accelerator: `caps+KeyQ` -> ["CapsLock", "Q"].
+fn key_caps(accel: &str) -> Vec<String> {
+    accel
+        .split('+')
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .map(|k| match k.to_ascii_lowercase().as_str() {
+            "caps" => "CapsLock".to_owned(),
+            "ctrl" | "control" => "Ctrl".to_owned(),
+            "shift" => "Shift".to_owned(),
+            "alt" => "Alt".to_owned(),
+            "super" | "win" | "meta" | "cmd" => "Win".to_owned(),
+            _ => k
+                .strip_prefix("Key")
+                .or_else(|| k.strip_prefix("Digit"))
+                .unwrap_or(k)
+                .to_uppercase(),
+        })
+        .collect()
+}
 
 /// Which collapsible section is open (at most one at a time).
 fn open_section(ctx: &egui::Context) -> Option<usize> {
@@ -44,8 +107,8 @@ fn set_open_section(ctx: &egui::Context, section: Option<usize>) {
 
 /// How much taller than the regular panel (`regular`) the settings page
 /// is; follows the open section, so the panel springs along with it.
-pub fn extra_height(ctx: &egui::Context, regular: f32) -> f32 {
-    let body = open_section(ctx).map_or(0.0, |i| BODY[i]);
+pub fn extra_height(ctx: &egui::Context, regular: f32, shortcuts: usize) -> f32 {
+    let body = open_section(ctx).map_or(0.0, |i| body_height(i, shortcuts));
     (BASE + body - regular).max(0.0)
 }
 
@@ -148,6 +211,7 @@ pub fn page(
     cctx: &ContentCtx,
     theme: &Theme,
     cfg: &mut Config,
+    shortcuts: &[Shortcut],
 ) -> PageOutput {
     let mut out = PageOutput::default();
     let ctx = ui.ctx().clone();
@@ -312,18 +376,24 @@ pub fn page(
 
             let open = open_section(&ctx);
             let mut y = top.max.y + GAP;
-            for section in [CUSTOMIZE, ADVANCED] {
+            for section in [CUSTOMIZE, ADVANCED, SHORTCUTS] {
                 let t = reveal(&ctx, section, open == Some(section));
+                let body_h = body_height(section, shortcuts.len());
                 let card = Rect::from_min_size(
                     pos2(panel.min.x, y),
-                    vec2(panel.width(), DISCLOSURE + BODY[section] * t),
+                    vec2(panel.width(), DISCLOSURE + body_h * t),
                 );
                 y = card.max.y + GAP;
                 widgets::card(ui.painter(), card, theme);
                 let head = Rect::from_min_size(card.min, vec2(card.width(), DISCLOSURE));
                 let (glyph, title, summary) = match section {
                     CUSTOMIZE => (icons::PALETTE, "Özelleştir", customize_summary(cfg)),
-                    _ => (icons::SLIDERS_HORIZONTAL, "Gelişmiş", advanced_summary(cfg)),
+                    ADVANCED => (icons::SLIDERS_HORIZONTAL, "Gelişmiş", advanced_summary(cfg)),
+                    _ => (
+                        icons::KEYBOARD,
+                        "Kısayollar",
+                        format!("{} kısayol · CapsLock basılı + harf", shortcuts.len()),
+                    ),
                 };
                 if widgets::disclosure_header(ui, head, glyph, title, &summary, t, theme).clicked()
                 {
@@ -344,14 +414,15 @@ pub fn page(
                     );
                     let body = Rect::from_min_size(
                         pos2(card.min.x, head.max.y - 6.0 * (1.0 - fade)),
-                        vec2(card.width(), BODY[section]),
+                        vec2(card.width(), body_h),
                     );
                     let mut bui = ui.new_child(UiBuilder::new().max_rect(body));
                     bui.set_clip_rect(card.intersect(ui.clip_rect()));
                     bui.multiply_opacity(fade * fade);
                     match section {
                         CUSTOMIZE => customize_body(&mut bui, body, theme, cfg, &mut out),
-                        _ => advanced_body(&mut bui, body, theme, cfg, &mut out),
+                        ADVANCED => advanced_body(&mut bui, body, theme, cfg, &mut out),
+                        _ => shortcuts_body(&mut bui, body, theme, shortcuts),
                     }
                 }
             }
@@ -652,6 +723,68 @@ fn advanced_body(ui: &mut Ui, rect: Rect, theme: &Theme, cfg: &mut Config, out: 
     hint(&mut rui, "Ses tuşlarını Zenith karşılar, gösterge çentikte çıkar", theme);
 }
 
+/// Every global shortcut in two columns: name on the left, key caps on the
+/// right, and how CapsLock shortcuts work underneath.
+fn shortcuts_body(ui: &mut Ui, rect: Rect, theme: &Theme, shortcuts: &[Shortcut]) {
+    let inner = rect.shrink2(vec2(14.0, 8.0));
+    let gap = 28.0;
+    let col_w = (inner.width() - gap) * 0.5;
+    let rows = shortcuts.len().div_ceil(2).max(1);
+    let painter = ui.painter();
+    for (i, sc) in shortcuts.iter().enumerate() {
+        let (col, line) = (i / rows, i % rows);
+        let r = Rect::from_min_size(
+            pos2(inner.min.x + col as f32 * (col_w + gap), inner.min.y + line as f32 * SHORTCUT_ROW),
+            vec2(col_w, SHORTCUT_ROW),
+        );
+        painter.text(
+            pos2(r.min.x, r.center().y),
+            Align2::LEFT_CENTER,
+            &sc.name,
+            Theme::font(SIZE_BODY),
+            theme.text,
+        );
+        // Key caps from the right edge leftwards, with a faint "+" between.
+        let mut x = r.max.x;
+        let caps = key_caps(&sc.accel);
+        for (k, cap) in caps.iter().enumerate().rev() {
+            let galley = painter.layout_no_wrap(
+                cap.clone(),
+                Theme::font_semibold(SIZE_LABEL - 1.0),
+                theme.text,
+            );
+            let w = (galley.size().x + 12.0).max(22.0);
+            let key = Rect::from_min_size(pos2(x - w, r.center().y - 10.0), vec2(w, 20.0));
+            painter.rect(
+                key,
+                5.0,
+                with_alpha(theme.text, 0.06),
+                Stroke::new(1.0, theme.tile_rim),
+                egui::StrokeKind::Inside,
+            );
+            painter.galley(key.center() - galley.size() * 0.5, galley, theme.text);
+            x = key.min.x;
+            if k > 0 {
+                painter.text(
+                    pos2(x - 7.0, r.center().y),
+                    Align2::CENTER_CENTER,
+                    "+",
+                    Theme::font(SIZE_LABEL - 1.0),
+                    theme.text_faint,
+                );
+                x -= 14.0;
+            }
+        }
+    }
+    painter.text(
+        pos2(inner.min.x, inner.min.y + rows as f32 * SHORTCUT_ROW + 12.0),
+        Align2::LEFT_CENTER,
+        "CapsLock'u basılı tut, harfe bas. Tek başına basınca büyük harfi açıp kapatır.",
+        Theme::font(SIZE_LABEL - 1.0),
+        theme.text_faint,
+    );
+}
+
 /// Small faint line under a row.
 fn hint(ui: &mut Ui, text: &str, theme: &Theme) {
     ui.label(
@@ -700,4 +833,17 @@ fn row(
             .layout(Layout::right_to_left(Align::Center)),
     );
     control(&mut cui).changed()
+}
+
+#[cfg(test)]
+mod shortcut_tests {
+    use super::key_caps;
+
+    #[test]
+    fn key_caps_read_well() {
+        assert_eq!(key_caps("caps+KeyQ"), ["CapsLock", "Q"]);
+        assert_eq!(key_caps("caps+N"), ["CapsLock", "N"]);
+        assert_eq!(key_caps("ctrl+shift+KeyY"), ["Ctrl", "Shift", "Y"]);
+        assert_eq!(key_caps("caps+Digit1"), ["CapsLock", "1"]);
+    }
 }

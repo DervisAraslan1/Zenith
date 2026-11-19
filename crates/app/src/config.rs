@@ -148,7 +148,7 @@ impl Default for Config {
             hover_delay_ms: 120,
             collapse_grace_ms: 250,
             launch_at_startup: false,
-            toggle_hotkey: "ctrl+shift+alt+N".into(),
+            toggle_hotkey: "caps+N".into(),
             plugin_dev: false,
             hide_system_osd: true,
             renderer: Renderer::Auto,
@@ -207,9 +207,10 @@ impl Config {
         match std::fs::read_to_string(&path) {
             Ok(text) => match toml::from_str::<Config>(&text) {
                 Ok(mut cfg) => {
-                    // The old default was Ctrl+Alt+N. Ctrl+Alt is AltGr on
-                    // many layouts, so it took characters; move it to the new default.
-                    if cfg.toggle_hotkey.eq_ignore_ascii_case("ctrl+alt+N") {
+                    // Older defaults: Ctrl+Alt+N (Ctrl+Alt is AltGr on many
+                    // layouts, so it took characters), then Ctrl+Shift+Alt+N.
+                    let old = ["ctrl+alt+N", "ctrl+shift+alt+N"];
+                    if old.iter().any(|o| cfg.toggle_hotkey.eq_ignore_ascii_case(o)) {
                         cfg.toggle_hotkey = Config::default().toggle_hotkey;
                         cfg.save()?;
                     }

@@ -16,7 +16,7 @@ use zenith_platform::hittest::{HitShape, HitTester};
 use zenith_platform::material::{self, Applied};
 use zenith_platform::single_instance::InstanceGuard;
 use zenith_platform::system::Battery;
-use zenith_platform::{Hwnd, startup, system, wallpaper, window};
+use zenith_platform::{Hwnd, caps_layer, startup, system, wallpaper, window};
 use zenith_ui::anim::{self, Motion};
 use zenith_ui::bento;
 use zenith_ui::geometry::Squircle;
@@ -47,6 +47,10 @@ struct Hotkeys {
     /// Module hotkeys and the module each belongs to.
     modules: Vec<(HotKey, &'static str)>,
     rx: Receiver<GlobalHotKeyEvent>,
+    /// CapsLock shortcuts (`caps+KeyQ`): key code and module.
+    caps: Vec<(u32, &'static str)>,
+    caps_toggle: Option<u32>,
+    caps_rx: Receiver<u32>,
 }
 
 impl Hotkeys {
@@ -55,6 +59,11 @@ impl Hotkeys {
         let Some(accel) = m.default_hotkey() else {
             return;
         };
+        if let Some(vk) = caps_layer::parse(accel) {
+            self.caps.push((vk, m.id()));
+            self.sync_caps();
+            return;
+        }
         match HotKey::from_str(accel).map(|hk| (self.manager.register(hk), hk)) {
             Ok((Ok(()), hk)) => self.modules.push((hk, m.id())),
             Ok((Err(e), _)) => tracing::warn!("hotkey {accel} for {} unavailable: {e}", m.id()),
@@ -70,6 +79,13 @@ impl Hotkeys {
             }
         }
         self.modules.retain(|(_, m)| *m != id);
+        self.caps.retain(|(_, m)| *m != id);
+        self.sync_caps();
+    }
+
+    /// Tells the CapsLock hook which keys are bound.
+    fn sync_caps(&self) {
+        caps_layer::set_keys(self.caps.iter().map(|(vk, _)| *vk).chain(self.caps_toggle));
     }
 }
 
@@ -1178,7 +1194,9 @@ fn timings(cfg: &Config) -> ShellTimings {
 
 fn register_hotkeys(cfg: &Config, registry: &Registry, ctx: &egui::Context) -> Result<Hotkeys> {
     let manager = GlobalHotKeyManager::new().context("creating hotkey manager")?;
+    let caps_toggle = caps_layer::parse(&cfg.toggle_hotkey);
     let toggle_id = match HotKey::from_str(&cfg.toggle_hotkey) {
+        _ if caps_toggle.is_some() => None,
         Ok(hk) => match manager.register(hk) {
             Ok(()) => Some(hk.id()),
             Err(e) => {
@@ -1191,6 +1209,13 @@ fn register_hotkeys(cfg: &Config, registry: &Registry, ctx: &egui::Context) -> R
             None
         }
     };
+    let (caps_tx, caps_rx) = unbounded();
+    let caps_ctx = ctx.clone();
+    caps_layer::install(move |vk| {
+        if caps_tx.send(vk).is_ok() {
+            caps_ctx.request_repaint();
+        }
+    });
     let (tx, rx) = unbounded();
     let ctx = ctx.clone();
     GlobalHotKeyEvent::set_event_handler(Some(move |e: GlobalHotKeyEvent| {
@@ -1203,7 +1228,11 @@ fn register_hotkeys(cfg: &Config, registry: &Registry, ctx: &egui::Context) -> R
         toggle_id,
         modules: Vec::new(),
         rx,
+        caps: Vec::new(),
+        caps_toggle,
+        caps_rx,
     };
+    hotkeys.sync_caps();
     for m in registry.all() {
         hotkeys.add_module(m);
     }
@@ -1282,6 +1311,15 @@ impl eframe::App for ZenithApp {
                 if Some(e.id) == hk.toggle_id {
                     toggle = !toggle;
                 } else if let Some((_, id)) = hk.modules.iter().find(|(k, _)| k.id() == e.id)
+                    && let Some(m) = self.registry.get_mut(id)
+                {
+                    m.on_hotkey();
+                }
+            }
+            while let Ok(vk) = hk.caps_rx.try_recv() {
+                if Some(vk) == hk.caps_toggle {
+                    toggle = !toggle;
+                } else if let Some((_, id)) = hk.caps.iter().find(|(k, _)| *k == vk)
                     && let Some(m) = self.registry.get_mut(id)
                 {
                     m.on_hotkey();

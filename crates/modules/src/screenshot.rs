@@ -9,7 +9,7 @@
 //! PNG to the Screenshots folder (and copy it). A delay of 3, 5 or 10
 //! seconds lets you open a menu first.
 //!
-//! Click the tile (or Ctrl+Shift+Alt+S) to capture; right click it for the page
+//! Click the tile (or CapsLock+S) to capture; right click it for the page
 //! with those settings and the last few captures, which reopen in the
 //! editor.
 
@@ -221,7 +221,7 @@ impl Module for Screenshot {
     }
 
     fn default_hotkey(&self) -> Option<&'static str> {
-        Some("ctrl+shift+alt+KeyS")
+        Some("caps+KeyS")
     }
 
     fn on_hotkey(&mut self) {
@@ -280,7 +280,7 @@ impl Module for Screenshot {
             }
         }
         if widgets::icon_button(header, icons::SELECTION, 26.0, false, theme)
-            .on_hover_text("Çek (Ctrl+Shift+Alt+S)")
+            .on_hover_text("Çek (CapsLock+S)")
             .clicked()
         {
             self.start();

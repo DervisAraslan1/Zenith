@@ -1152,7 +1152,7 @@ impl Module for Calculator {
     }
 
     fn default_hotkey(&self) -> Option<&'static str> {
-        Some("ctrl+shift+alt+KeyK")
+        Some("caps+KeyK")
     }
 
     fn on_hotkey(&mut self) {
@@ -1191,7 +1191,7 @@ impl Module for Calculator {
             return;
         }
         if kit::tool_tile(ui, ctx, icons::CALCULATOR, false)
-            .on_hover_text("Hesap makinesi ve birim çevirici  \u{00B7}  Ctrl+Shift+Alt+K")
+            .on_hover_text("Hesap makinesi ve birim çevirici  \u{00B7}  CapsLock+K")
             .clicked()
         {
             self.open_page = true;

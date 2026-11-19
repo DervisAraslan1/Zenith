@@ -6,6 +6,7 @@
 
 pub mod audio;
 pub mod backdrop;
+pub mod caps_layer;
 pub mod capture;
 pub mod crash;
 pub mod clipboard;

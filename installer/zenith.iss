@@ -49,7 +49,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Messages]
 WelcomeLabel2=This will install [name/ver] on your computer.%n%nZenith is a small glass pill at the top of your screen. Hover it and it opens into a grid of utilities.
-FinishedLabel=Setup has finished installing [name].%n%nLook for the pill at the top of your screen and hover it to open. Ctrl+Shift+Alt+N pins it open.
+FinishedLabel=Setup has finished installing [name].%n%nLook for the pill at the top of your screen and hover it to open. CapsLock+N pins it open.
 
 [Tasks]
 Name: "startup"; Description: "Launch Zenith when I sign in"

@@ -2,12 +2,13 @@
 //! device running the open-source LocalSend app (Android, iOS, desktop), on
 //! the local network only, with no cloud and no account.
 //!
-//! - **Discovery:** JSON announcements on UDP multicast `224.0.0.167:53317`.
+//! - **Discovery:** JSON announcements on UDP multicast `224.0.0.168:53318` (Nexora's network;
+//!   stock LocalSend uses `224.0.0.167:53317`).
 //!   A device that hears an announcement registers back over HTTP(S), or
 //!   answers on multicast when HTTP fails. A manual deep scan also tries
 //!   `POST /register` on every address of the local /24 (multicast is often
 //!   filtered on Wi-Fi).
-//! - **Receiving:** a small HTTP server on TCP 53317 (`/register`,
+//! - **Receiving:** a small HTTP server on TCP 53318, or a free port when the PC's Nexora holds it (`/register`,
 //!   `/prepare-upload`, `/upload`, `/cancel`, `/info`). Zenith advertises
 //!   `"protocol": "http"`, so peers talk plain HTTP to it.
 //! - **Sending:** phones serve HTTPS with a self-signed certificate (the
@@ -27,8 +28,9 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-pub const PORT: u16 = 53317;
-const GROUP: Ipv4Addr = Ipv4Addr::new(224, 0, 0, 167);
+/// Nexora (the phone app) runs the LocalSend protocol on its own port and multicast group.
+pub const PORT: u16 = 53318;
+const GROUP: Ipv4Addr = Ipv4Addr::new(224, 0, 0, 168);
 const API: &str = "/api/localsend/v2";
 const VERSION: &str = "2.1";
 /// How long a peer may take to answer a transfer request before it is
@@ -291,7 +293,7 @@ impl LocalSend {
             download: false,
             announce: None,
         };
-        // The official port, else any free one (another LocalSend running).
+        // The official port, else any free one (Nexora running on this PC).
         let server = tiny_http::Server::http(("0.0.0.0", PORT))
             .or_else(|_| tiny_http::Server::http(("0.0.0.0", 0)));
         let (server, port, server_error) = match server {

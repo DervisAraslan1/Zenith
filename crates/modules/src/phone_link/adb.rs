@@ -616,6 +616,8 @@ pub fn app_name(package: &str) -> String {
         ("com.viber.voip", "Viber"),
         ("com.google.android.apps.photos", "Photos"),
         ("org.localsend.localsend_app", "LocalSend"),
+        ("com.omega.nexora", "Nexora"),
+        ("com.omega.nexora.debug", "Nexora"),
         ("android", "Android"),
         ("com.android.systemui", "System"),
     ];
